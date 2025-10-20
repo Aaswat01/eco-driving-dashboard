@@ -8,10 +8,17 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
 html, body {
-  margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
   background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
-  color: white; height: 100%; width: 100%; overflow: hidden;
+  color: white;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto; /* ✅ allow vertical scroll */
 }
+
 .tabs { display: flex; gap: 0.5vw; background: #1c2b44; padding: 0.5vh 1vw; }
 .tab { padding: 0.8vh 1.8vw; cursor: pointer; border-radius: 0.8vh; background: #283550; font-weight: bold; font-size: clamp(0.8rem,1.2vw,1.2rem); transition: 0.3s; }
 .tab.active { background: #007bff; color: white; }
@@ -32,14 +39,23 @@ html, body {
 .stat-value { font-size: clamp(1rem,2vw,2.5rem); text-align: center; padding: 0.5vh 0.5vw; background: rgba(255,255,255,0.15); border-radius: 1vh; min-width: 5vw; font-weight: bold; margin-top: auto; }
 
 .right { flex: 0 0 72%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.map-container, .camera { flex: 1; border-radius: 1.2vh; overflow: hidden; position: relative; border: 0.2vh solid rgba(255,255,255,0.3); box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3); }
+.map-container, .camera {
+  flex: 1;
+  border-radius: 1.2vh;
+  overflow: hidden;
+  position: relative;
+  border: 0.2vh solid rgba(255,255,255,0.3);
+  box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3);
+  min-height: 40vh; /* ✅ ensure visibility */
+}
+
 .map { width: 100%; height: 100%; border: 0; }
 
 .map-button {
   position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
   padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
   color:#fff; font-weight:bold; border:none; border-radius:2vh; cursor:pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem,1vw,1rem);
+  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem, 1.2vw, 1.3rem);
 }
 .map-button:hover { transform: translateX(-50%) scale(1.05); background: linear-gradient(135deg,#0099ff,#005ce6); }
 
@@ -74,6 +90,50 @@ html, body {
   .left, .right { flex: 1 1 100%; height: auto; }
   .map-container, .camera { flex: 0 0 45%; }
 }
+  /* ✅ Responsive stacking for mobile */
+@media (max-width: 1024px) {
+  .tab-content.active {
+    flex-direction: column;
+    gap: 1.2vh;
+    height: auto;
+  }
+  .left, .right {
+    flex: 1 1 100%;
+    width: 100%;
+    height: auto;
+  }
+  .map-container, .camera {
+    width: 100%;
+    height: 45vh;
+  }
+  .card {
+    min-height: 12vh;
+    font-size: 0.9rem;
+  }
+}
+
+/* ✅ Handle very small screens (phones in portrait) */
+@media (max-width: 600px) {
+  .tabs {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .tab {
+    font-size: 0.8rem;
+    padding: 0.6vh 1.2vw;
+  }
+  .stat-label {
+    font-size: 0.9rem;
+  }
+  .stat-value {
+    font-size: 1.1rem;
+  }
+  .map-button {
+    font-size: 0.8rem;
+    padding: 0.8vh 4vw;
+  }
+}
+.map-container
 </style>
 </head>
 <body>
@@ -374,13 +434,27 @@ document.getElementById("map-toggle").addEventListener("click",()=>{
   const camera=document.querySelector(".camera");
   const button=document.getElementById("map-toggle");
   if(!mapFull){
-    mapContainer.style.position="fixed"; mapContainer.style.top="0"; mapContainer.style.left="0"; mapContainer.style.width="100vw"; mapContainer.style.height="100vh"; mapContainer.style.zIndex="2000";
-    camera.style.display="none"; button.innerText="Restore Map"; mapFull=true; setTimeout(()=>map.invalidateSize(),300);
+    mapContainer.style.position="fixed";
+    mapContainer.style.top="0";
+    mapContainer.style.left="0";
+    mapContainer.style.width="100vw";
+    mapContainer.style.height="100vh";
+    mapContainer.style.zIndex="2000";
+    document.body.style.overflow="hidden"; // ✅ prevent double scroll when fullscreen
+    camera.style.display="none";
+    button.innerText="Restore Map";
+    mapFull=true;
+    setTimeout(()=>map.invalidateSize(),300);
   }else{
-    mapContainer.style.position=""; mapContainer.style.width=""; mapContainer.style.height=""; mapContainer.style.zIndex="";
-    camera.style.display="block"; button.innerText="Full Map"; mapFull=false; setTimeout(()=>map.invalidateSize(),300);
+    mapContainer.removeAttribute("style");
+    document.body.style.overflowY="auto"; // ✅ restore scrolling
+    camera.style.display="block";
+    button.innerText="Full Map";
+    mapFull=false;
+    setTimeout(()=>map.invalidateSize(),300);
   }
 });
+
 
 /* ===== Camera Toggle ===== */
 const camImg=document.getElementById("camera-feed");
@@ -400,6 +474,15 @@ document.addEventListener('click',e=>{if(!suggestBox.contains(e.target)&&e.targe
 document.getElementById('addBtn').onclick=()=>{if(results.length) select(0);};
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&results.length) select(0);});
 function select(i){ const f=results[i]; if(!f) return; const [lng,lat]=f.geometry.coordinates,latlng=L.latLng(lat,lng); waypoints.push(latlng); L.marker(latlng).addTo(map); suggestBox.style.display='none'; input.value=''; if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length]); }
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    map.invalidateSize(); // ✅ refresh Leaflet layout
+    document.body.scrollTop = 0; // scroll to top
+  }, 400);
+});
+
 </script>
 </body>
 </html>
+
