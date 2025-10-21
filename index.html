@@ -21,7 +21,7 @@ html, body {
 .left { flex: 0 0 28%; display: flex; flex-direction: column; gap: 1vh; height: 100%; min-height:0; }
 .card { background: rgba(28,34,48,0.95); border-radius: 1.5vh; border: 0.2vh solid #ffffff50;
   display: flex; flex-direction: column; justify-content: space-between; padding: 1vh 1vw; box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
-  transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
+  transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1 1 0; min-height:0; }
 .card:hover { transform: translateY(-0.3vh); box-shadow: 0 0.8vh 2vh rgba(0,0,0,0.5); }
 .ai-box { background:#ffa500; color:#000; }
 .speed-box { background:#4e79a7; }
@@ -32,7 +32,7 @@ html, body {
 .stat-value { font-size: clamp(1rem,2vw,2.5rem); text-align: center; padding: 0.5vh 0.5vw; background: rgba(255,255,255,0.15); border-radius: 1vh; min-width: 5vw; font-weight: bold; margin-top: auto; }
 
 .right { flex: 0 0 72%; display: flex; flex-direction: column; gap: 1vh; height: 100%; min-height:0; }
-.map-container, .camera { flex: 1; border-radius: 1.2vh; overflow: hidden; position: relative; border: 0.2vh solid rgba(255,255,255,0.3); box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3); min-height:0; }
+.map-container, .camera { flex: 1 1 0; border-radius: 1.2vh; overflow: hidden; position: relative; border: 0.2vh solid rgba(255,255,255,0.3); box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3); }
 .map { width: 100%; height: 100%; border: 0; }
 
 .map-button {
@@ -59,7 +59,7 @@ html, body {
 #suggestBox{position:absolute;top:55px;left:50%;transform:translateX(-50%);width:340px;background:#1c1c24;border-radius:10px;overflow:auto;z-index:1001;display:none;}
 .suggest-item{padding:10px;border-bottom:1px solid #222;cursor:pointer;}
 
-/* ---- Route panel inside map container ---- */
+/* Route panel inside map container */
 .route-panel{
   position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
   z-index:1000; background:#181920; border-radius:10px; padding:5px;
@@ -69,15 +69,16 @@ html, body {
 .route-header{background:#2e323a;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 .route-content{display:none;padding:6px;background:#1f2228;max-height:200px;overflow-y:auto;}
 .step-item{background:#1f2228;border-radius:6px;padding:6px;margin-bottom:4px;font-size:12px;}
+
 @media (max-width: 1200px) {
   .tab-content.active { flex-direction: column; }
   .left, .right { flex: 1 1 100%; height: auto; }
   .map-container, .camera { flex: 0 0 45%; }
 }
 
-/* Portrait */
+/* Portrait layout */
 @media (orientation: portrait) {
-  .tab-content.active { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(8,1fr); grid-template-areas:
+  .tab-content.active { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(8, 1fr); gap: 0; grid-template-areas:
     "ai-tips ai-tips"
     "speed gear"
     "fuel-used throttle"
@@ -85,14 +86,14 @@ html, body {
     "map map"
     "map map"
     "camera camera"
-    "camera camera"; gap: 4px; height:100vh; width:100vw; }
+    "camera camera"; }
   .ai-box { grid-area: ai-tips; }
   .speed-box { grid-area: speed; }
   .gear-box { grid-area: gear; }
   .fuel-used-box { grid-area: fuel-used; }
   .throttle-box { grid-area: throttle; }
-  #uiContainer{position:static; display:grid; grid-template-columns:3fr 1fr; width:100%; margin:0; padding:0; gap:0;}
-  #searchInput{width:100%; border-radius:0;}
+  #uiContainer{grid-area:search-box;position:static;display:grid;grid-template-columns:3fr 1fr;width:100%;margin:0;padding:0;gap:0;}
+  #searchInput{width:100%;border-radius:0;}
   #addBtn{border-radius:0;}
 }
 </style>
@@ -103,11 +104,26 @@ html, body {
 </div>
 <div class="tab-content active" id="dashboard">
   <div class="left">
-    <div class="card ai-box"><div class="stat-label">AI Recommendation</div><div class="stat-value" id="ai-tip">Drive smoothly</div></div>
-    <div class="card speed-box"><div class="stat-label">Recommended Speed</div><div class="stat-value" id="speed">0 km/h</div></div>
-    <div class="card gear-box"><div class="stat-label">Recommended Gear</div><div class="stat-value" id="gear">0</div></div>
-    <div class="card fuel-used-box"><div class="stat-label">Fuel Used</div><div class="stat-value" id="fuel-used">0.00 L</div></div>
-    <div class="card throttle-box"><div class="stat-label">Throttle</div><div class="stat-value" id="throttle">0%</div></div>
+    <div class="card ai-box">
+      <div class="stat-label">AI Recommendation</div>
+      <div class="stat-value" id="ai-tip">Drive smoothly</div>
+    </div>
+    <div class="card speed-box">
+      <div class="stat-label">Recommended Speed</div>
+      <div class="stat-value" id="speed">0 km/h</div>
+    </div>
+    <div class="card gear-box">
+      <div class="stat-label">Recommended Gear</div>
+      <div class="stat-value" id="gear">0</div>
+    </div>
+    <div class="card fuel-used-box">
+      <div class="stat-label">Fuel Used</div>
+      <div class="stat-value" id="fuel-used">0.00 L</div>
+    </div>
+    <div class="card throttle-box">
+      <div class="stat-label">Throttle</div>
+      <div class="stat-value" id="throttle">0%</div>
+    </div>
   </div>
   <div class="right">
     <div class="map-container">
@@ -122,7 +138,6 @@ html, body {
     </div>
   </div>
 </div>
-
 <div id="uiContainer">
   <input id="searchInput" placeholder="Search place or address"/>
   <button id="addBtn">Add</button>
@@ -132,7 +147,6 @@ html, body {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script>
-
 /* ===== Map & Icons ===== */
 const map = L.map('map').setView([19.076,72.8777],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
@@ -409,5 +423,3 @@ function select(i){ const f=results[i]; if(!f) return; const [lng,lat]=f.geometr
 </script>
 </body>
 </html>
-
-
