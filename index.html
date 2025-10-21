@@ -18,7 +18,6 @@ html, body {
   overflow-x: hidden;
   overflow-y: auto; /* ✅ allow vertical scroll */
 }
-
 .tabs { display: flex; gap: 0.5vw; background: #1c2b44; padding: 0.5vh 1vw; }
 .tab { padding: 0.8vh 1.8vw; cursor: pointer; border-radius: 0.8vh; background: #283550; font-weight: bold; font-size: clamp(0.8rem,1.2vw,1.2rem); transition: 0.3s; }
 .tab.active { background: #007bff; color: white; }
@@ -48,9 +47,7 @@ html, body {
   box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3);
   min-height: 40vh; /* ✅ ensure visibility */
 }
-
 .map { width: 100%; height: 100%; border: 0; }
-
 .map-button {
   position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
   padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
@@ -58,7 +55,6 @@ html, body {
   box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem, 1.2vw, 1.3rem);
 }
 .map-button:hover { transform: translateX(-50%) scale(1.05); background: linear-gradient(135deg,#0099ff,#005ce6); }
-
 .camera img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s ease; filter: blur(12px) brightness(0.7); }
 .camera .center-button, .camera .disable-button {
   position: absolute; z-index: 2; padding: 1vh 2vw;
@@ -68,13 +64,11 @@ html, body {
 }
 .camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); }
 .camera .disable-button { top: 1vh; left: 1vw; }
-
 #uiContainer{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:1000;}
 #searchInput{width:300px;padding:10px 14px;border-radius:20px;border:none;background:#15161a;color:#eee;}
 #addBtn{background:#4DA6FF;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;}
 #suggestBox{position:absolute;top:55px;left:50%;transform:translateX(-50%);width:340px;background:#1c1c24;border-radius:10px;overflow:auto;z-index:1001;display:none;}
 .suggest-item{padding:10px;border-bottom:1px solid #222;cursor:pointer;}
-
 /* ---- Route panel inside map container ---- */
 .route-panel{
   position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
@@ -186,14 +180,12 @@ html, body {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script>
-
 /* ===== Map & Icons ===== */
 const map = L.map('map').setView([19.076,72.8777],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
 const carIcon = L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',iconSize:[42,42]});
 let userMarker=null, waypoints=[], waypointMarkers=[], routes=[], totalFuel=0;
 const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BFA5'];
-
 /* ===== Eco Advisor ===== */
 function ecoAdvisor(dist,elev,turnText){
     const t=(turnText||'').toLowerCase();
@@ -221,7 +213,6 @@ function ecoAdvisor(dist,elev,turnText){
 
     return {speed, gear, throttle, tip};
 }
-
 /* ===== Driver Behavior Monitoring ===== */
 let driverStats={overspeed:0, harshAccel:0, totalPoints:0};
 function updateDriverBehavior(currentSpeed,eco){
@@ -236,7 +227,6 @@ function updateDriverBehavior(currentSpeed,eco){
     if(driverStats.overspeed/driverStats.totalPoints>0.3) eco.tip+=" — Slow down! Overspeed habit detected";
     if(driverStats.harshAccel/driverStats.totalPoints>0.2) eco.tip+=" — Smooth throttle for fuel saving";
 }
-
 /* ===== Elevation API ===== */
 async function getElevations(coords){
     try{
@@ -246,8 +236,6 @@ async function getElevations(coords){
         return d.results.map(x=>x.elevation);
     }catch{return new Array(coords.length).fill(0);}
 }
-
-
 /* ===== Multi-Step Route Awareness ===== */
 async function getUpcomingSteps(latlng, maxSteps=5){
   if(!routes.length) return [];
@@ -266,7 +254,6 @@ async function getUpcomingSteps(latlng, maxSteps=5){
   });
   return upcomingSteps;
 }
-
 async function adaptiveAIDashboard(latlng,heading){
     const currentSpeed = calculateGPSSpeed(latlng);
     const slopeData=await predictElevation(latlng,heading);
@@ -287,9 +274,7 @@ async function adaptiveAIDashboard(latlng,heading){
             if(step.element) step.element.title=`Tip: ${stepEco.tip}, Speed: ${stepEco.speed}, Gear: ${stepEco.gear}, Throttle: ${stepEco.throttle}%`;
         });
     }
-
     updateDriverBehavior(currentSpeed,eco);
-
     document.getElementById("speed").textContent = eco.speed+" km/h";
     document.getElementById("gear").textContent = eco.gear;
     document.getElementById("throttle").textContent = eco.throttle+"%";
@@ -297,8 +282,7 @@ async function adaptiveAIDashboard(latlng,heading){
     totalFuel += (eco.throttle/1000);
     document.getElementById("fuel-used").textContent = totalFuel.toFixed(2)+" L";
 }
-
-/* ===== GPS speed and idle detection ===== */
+/* ==== GPS speed and idle detection ===== */
 let lastLatLng=null, lastGPSPos=null, lastGPSTime=null, idleStart=null;
 const IDLE_THRESHOLD=3, IDLE_TIME=60;
 function checkIdle(latlng){
@@ -481,8 +465,8 @@ window.addEventListener("orientationchange", () => {
     document.body.scrollTop = 0; // scroll to top
   }, 400);
 });
-
 </script>
 </body>
 </html>
+
 
