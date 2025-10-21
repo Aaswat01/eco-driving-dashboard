@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
-/* ------------------- Base / Desktop (original) layout ------------------- */
 :root{--left-w:28%;--right-w:72%;}
 html, body { margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60); color:#fff; min-height:100vh; }
 .tabs { display:flex; gap:0.5vw; background:#1c2b44; padding:0.5vh 1vw; }
@@ -44,68 +43,49 @@ html, body { margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; bac
 .route-content{ display:none; padding:6px; background:#1f2228; max-height:200px; overflow-y:auto; }
 .step-item{ background:#1f2228; border-radius:6px; padding:6px; margin-bottom:4px; font-size:12px; }
 
-/* ------------------- Portrait / Mobile grid layout (new) ------------------- */
-/* The portrait layout keeps a compact grid where controls are stacked and search input appears between throttle and fuel */
-.container { display:grid; gap:6px; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto 1fr 1fr; grid-template-areas: "ai ai" "speed gear" "throttle fuel" "map map" "camera camera"; padding:8px; }
+/* ------------------- Portrait / Mobile grid layout ------------------- */
+.container { display:grid; gap:6px; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto auto auto auto auto; grid-template-areas:
+"ai ai"
+"speed gear"
+"throttle search"
+"fuel fuel"
+"map map"
+"camera camera"; padding:8px; }
 .container .ai-tips{ grid-area: ai; }
 .container .speed{ grid-area: speed; }
 .container .gear{ grid-area: gear; }
-.container .fuel-saved{ grid-area: fuel; }
 .container .throttle{ grid-area: throttle; }
+.container .search{ grid-area: search; display:flex; align-items:center; justify-content:center; gap:8px; }
+.container .fuel-saved{ grid-area: fuel; }
 .container .map-grid{ grid-area: map; }
 .container .camera-grid{ grid-area: camera; }
 
-/* small helper styles for portrait cards */
-.p-card{ background: rgba(28,34,48,0.95); border-radius:10px; padding:10px; border:1px solid #ffffff30; }
+/* Portrait cards style */
+.p-card{ background: rgba(28,34,48,0.95); border-radius:1.5vh; padding:10px; border:0.2vh solid #ffffff50; box-shadow:0 0.4vh 1.2vh rgba(0,0,0,0.3); display:flex; flex-direction:column; justify-content:space-between; }
 
-/* Show portrait container when device is in portrait orientation or narrow width */
+/* Show portrait container for narrow width / portrait */
 @media (orientation: portrait), (max-width:900px){
-  /* hide original desktop tabs/layout */
   .tabs, .tab-content { display:none !important; }
   body{ overflow-y:auto; }
   .container{ display:grid; }
-  /* position search input between throttle and fuel visually -- we render a copy in portrait UI */
-  #portraitSearchWrap{ display:flex; justify-content:center; margin:6px 0; }
-  #portraitSearch{ width:92%; padding:10px;border-radius:20px;border:none;background:#15161a;color:#eee; }
-  #portraitMic{ margin-left:8px; background:#4DA6FF;color:#fff;border:none;padding:8px 10px;border-radius:10px; }
 }
-
-/* Keep desktop visible and portrait hidden by default */
 @media (min-width:901px) and (orientation: landscape){ .container{ display:none; } }
-
-/* Small screens fine-tuning */
 @media (max-width:600px){ .stat-label{ font-size:0.9rem;} .stat-value{ font-size:1.1rem;} }
-
 </style>
 </head>
 <body>
 
-<!-- ================== Original Desktop Tabbed Dashboard (kept, unchanged structure but cleaned) ================== -->
+<!-- Desktop layout (unchanged) -->
 <div class="tabs">
   <div class="tab active" data-tab="dashboard">Dashboard</div>
 </div>
 <div class="tab-content active" id="dashboard">
   <div class="left">
-    <div class="card ai-box">
-      <div class="stat-label">AI Recommendation</div>
-      <div class="stat-value" id="ai-tip">Drive smoothly</div>
-    </div>
-    <div class="card speed-box">
-      <div class="stat-label">Recommended Speed</div>
-      <div class="stat-value" id="speed">0 km/h</div>
-    </div>
-    <div class="card gear-box">
-      <div class="stat-label">Recommended Gear</div>
-      <div class="stat-value" id="gear">0</div>
-    </div>
-    <div class="card fuel-used-box">
-      <div class="stat-label">Fuel Used</div>
-      <div class="stat-value" id="fuel-used">0.00 L</div>
-    </div>
-    <div class="card throttle-box">
-      <div class="stat-label">Throttle</div>
-      <div class="stat-value" id="throttle">0%</div>
-    </div>
+    <div class="card ai-box"><div class="stat-label">AI Recommendation</div><div class="stat-value" id="ai-tip">Drive smoothly</div></div>
+    <div class="card speed-box"><div class="stat-label">Recommended Speed</div><div class="stat-value" id="speed">0 km/h</div></div>
+    <div class="card gear-box"><div class="stat-label">Recommended Gear</div><div class="stat-value" id="gear">0</div></div>
+    <div class="card throttle-box"><div class="stat-label">Throttle</div><div class="stat-value" id="throttle">0%</div></div>
+    <div class="card fuel-used-box"><div class="stat-label">Fuel Used</div><div class="stat-value" id="fuel-used">0.00 L</div></div>
   </div>
   <div class="right">
     <div class="map-container">
@@ -121,50 +101,32 @@ html, body { margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; bac
   </div>
 </div>
 
-<!-- UI container: replaced Add button with mic button for voice search -->
+<!-- Desktop search UI -->
 <div id="uiContainer">
   <input id="searchInput" placeholder="Search place or address" autocomplete="off" />
   <button id="micBtn" title="Voice search / commands">🎤</button>
 </div>
 <div id="suggestBox"></div>
 
-<!-- ================== Portrait-friendly condensed grid (new) ================== -->
-<div class="container" aria-hidden="false">
-  <div class="ai-tips p-card">
-    <div class="stat-label">AI Recommendation</div>
-    <div class="stat-value" id="p-ai-tip">Drive smoothly</div>
-  </div>
-  <div class="speed p-card">
-    <div class="stat-label">Speed</div>
-    <div class="stat-value" id="p-speed">0 km/h</div>
-  </div>
-  <div class="gear p-card">
-    <div class="stat-label">Gear</div>
-    <div class="stat-value" id="p-gear">0</div>
-  </div>
-  <div class="throttle p-card">
-    <div class="stat-label">Throttle</div>
-    <div class="stat-value" id="p-throttle">0%</div>
-  </div>
-  <div class="fuel-saved p-card">
-    <div class="stat-label">Fuel Used</div>
-    <div class="stat-value" id="p-fuel-used">0.00 L</div>
-  </div>
-  <!-- Portrait search appears here between throttle and fuel visually -->
-  <div id="portraitSearchWrap" style="display:none;">
-    <input id="portraitSearch" placeholder="Search place or address" />
+<!-- Portrait-friendly condensed grid -->
+<div class="container">
+  <div class="ai-tips p-card"><div class="stat-label">AI Recommendation</div><div class="stat-value" id="p-ai-tip">Drive smoothly</div></div>
+  <div class="speed p-card"><div class="stat-label">Speed</div><div class="stat-value" id="p-speed">0 km/h</div></div>
+  <div class="gear p-card"><div class="stat-label">Gear</div><div class="stat-value" id="p-gear">0</div></div>
+  <div class="throttle p-card"><div class="stat-label">Throttle</div><div class="stat-value" id="p-throttle">0%</div></div>
+  <!-- Portrait search placed beside throttle -->
+  <div class="search p-card">
+    <input id="portraitSearch" placeholder="Search place or address" style="flex:1; border-radius:20px; border:none; padding:8px 12px; background:#15161a; color:#eee;" />
     <button id="portraitMic">🎤</button>
   </div>
-  <div class="map-grid p-card" style="height:40vh; padding:0;">
-    <div id="p-map" style="width:100%;height:100%;"></div>
-  </div>
-  <div class="camera-grid p-card" style="height:30vh;padding:0;">
-    <img src="/video_feed" id="p-camera" style="width:100%;height:100%;object-fit:cover;filter:blur(12px) brightness(0.7);" />
-  </div>
+  <div class="fuel-saved p-card"><div class="stat-label">Fuel Used</div><div class="stat-value" id="p-fuel-used">0.00 L</div></div>
+  <div class="map-grid p-card" style="height:40vh; padding:0;"><div id="p-map" style="width:100%;height:100%;"></div></div>
+  <div class="camera-grid p-card" style="height:30vh; padding:0;"><img src="/video_feed" id="p-camera" style="width:100%;height:100%;object-fit:cover;filter:blur(12px) brightness(0.7);" /></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<!-- JS logic (voice, map, eco advisor) kept the same -->
 <script>
 /* ----------------- Shared map, routing and eco logic (kept & cleaned) ----------------- */
 const map = L.map('map').setView([19.076,72.8777],13);
@@ -395,3 +357,4 @@ updatePortraitUI();
 </script>
 </body>
 </html>
+
