@@ -2,137 +2,190 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Driver Dashboard — AI Eco Driving</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
-html, body {
-  margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif;
-  background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
-  color: white; height: 100%; width: 100%; overflow: hidden;
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: #0d1117;
+  color: #fff;
+  overflow: hidden;
 }
-.tabs { display: flex; gap: 0.5vw; background: #1c2b44; padding: 0.5vh 1vw; }
-.tab { padding: 0.8vh 1.8vw; cursor: pointer; border-radius: 0.8vh; background: #283550; font-weight: bold; font-size: clamp(0.8rem,1.2vw,1.2rem); transition: 0.3s; }
-.tab.active { background: #007bff; color: white; }
-.tab-content { display: none; flex: 1; box-sizing: border-box; height: calc(100% - 6vh); padding: 0; }
-.tab-content.active { display: flex; gap: 1vw; }
-
-.left { flex: 0 0 28%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.card { background: rgba(28,34,48,0.95); border-radius: 1.5vh; border: 0.2vh solid #ffffff50;
-  display: flex; flex-direction: column; justify-content: space-between; padding: 1vh 1vw; box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
-  transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
-.card:hover { transform: translateY(-0.3vh); box-shadow: 0 0.8vh 2vh rgba(0,0,0,0.5); }
-.ai-box { background:#ffa500; color:#000; }
-.speed-box { background:#4e79a7; }
-.gear-box { background:#76b7b2; color:#000; }
-.fuel-used-box { background:#c2c2c2; color:#000; }
-.throttle-box { background:#2ca02c; color:#000; }
-.stat-label { font-size: clamp(0.8rem, 1.5vw, 1.5rem); color: #fff; margin-bottom: 0.5vh; text-align: center; text-transform: uppercase; letter-spacing: 0.1vw; }
-.stat-value { font-size: clamp(1rem,2vw,2.5rem); text-align: center; padding: 0.5vh 0.5vw; background: rgba(255,255,255,0.15); border-radius: 1vh; min-width: 5vw; font-weight: bold; margin-top: auto; }
-
-.right { flex: 0 0 72%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.map-container, .camera { flex: 1; border-radius: 1.2vh; overflow: hidden; position: relative; border: 0.2vh solid rgba(255,255,255,0.3); box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3); }
-.map { width: 100%; height: 100%; border: 0; }
-
-.map-button {
-  position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
-  padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
-  color:#fff; font-weight:bold; border:none; border-radius:2vh; cursor:pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem,1vw,1rem);
+.dashboard {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
 }
-.map-button:hover { transform: translateX(-50%) scale(1.05); background: linear-gradient(135deg,#0099ff,#005ce6); }
-
-.camera img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s ease; filter: blur(12px) brightness(0.7); }
-.camera .center-button, .camera .disable-button {
-  position: absolute; z-index: 2; padding: 1vh 2vw;
-  font-size: clamp(0.8rem,1vw,1rem); background: linear-gradient(135deg, #28a745, #1c7c31);
-  color: #fff; font-weight: bold; border: none; border-radius: 1vh; cursor: pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
+.left-panel {
+  width: 20%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background: #161b22;
+  overflow-y: auto;
 }
-.camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); }
-.camera .disable-button { top: 1vh; left: 1vw; }
-
-#uiContainer{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:1000;}
-#searchInput{width:300px;padding:10px 14px;border-radius:20px;border:none;background:#15161a;color:#eee;}
-#addBtn{background:#4DA6FF;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;}
-#suggestBox{position:absolute;top:55px;left:50%;transform:translateX(-50%);width:340px;background:#1c1c24;border-radius:10px;overflow:auto;z-index:1001;display:none;}
-.suggest-item{padding:10px;border-bottom:1px solid #222;cursor:pointer;}
-
-/* ---- Route panel inside map container ---- */
-.route-panel{
-  position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
-  z-index:1000; background:#181920; border-radius:10px; padding:5px;
-  transition: all 0.3s; display:flex; flex-direction:column;
+.right-panel {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
-.route-box{background:#252530;border-radius:8px;margin-bottom:8px;border:1px solid #2a2a36;overflow:hidden;}
-.route-header{background:#2e323a;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
-.route-content{display:none;padding:6px;background:#1f2228;max-height:200px;overflow-y:auto;}
-.step-item{background:#1f2228;border-radius:6px;padding:6px;margin-bottom:4px;font-size:12px;}
-@media (max-width: 1200px) {
-  .tab-content.active { flex-direction: column; }
-  .left, .right { flex: 1 1 100%; height: auto; }
-  .map-container, .camera { flex: 0 0 45%; }
+.card {
+  background: #1e252f;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 12px;
+  box-shadow: 0 0 5px #0008;
+  text-align: center;
+}
+.card h2 {
+  font-size: 1rem;
+  margin-bottom: 6px;
+  color: #58a6ff;
+}
+#aiTip { flex: 1; }
+#map, #camera {
+  flex: 1;
+  border-radius: 12px;
+  margin: 5px;
+}
+#map { height: 50%; }
+#camera { height: 50%; background: #000; }
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 6px 0;
+}
+.search-container input {
+  width: 80%;
+  padding: 8px;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  outline: none;
+}
+.search-container button {
+  width: 20%;
+  padding: 8px;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  background: #58a6ff;
+  color: white;
+  cursor: pointer;
+}
+#routePanel {
+  max-height: 30vh;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.route-box {
+  background: #1e252f;
+  margin: 5px 0;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 0 4px #0006;
+}
+.route-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+.remove-btn {
+  background: #ff4c4c;
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+/* ===== Portrait Layout ===== */
+@media (orientation: portrait) {
+  .dashboard {
+    flex-direction: column;
+  }
+  .left-panel, .right-panel {
+    width: 100%;
+  }
+  .left-panel {
+    flex-direction: column;
+    align-items: center;
+  }
+  #aiTip {
+    width: 95%;
+    text-align: center;
+  }
+  .upper-row {
+    display: flex;
+    justify-content: space-around;
+    width: 95%;
+  }
+  .middle-row {
+    display: flex;
+    justify-content: space-around;
+    width: 95%;
+  }
+  .search-container {
+    width: 95%;
+    margin-top: 8px;
+  }
+  .right-panel {
+    height: 100%;
+  }
+  #map, #camera {
+    width: 95%;
+    margin: auto;
+    height: 35vh;
+  }
 }
 </style>
 </head>
 <body>
-<div class="tabs">
-  <div class="tab active" data-tab="dashboard">Dashboard</div>
-</div>
-<div class="tab-content active" id="dashboard">
-  <div class="left">
-    <div class="card ai-box">
-      <div class="stat-label">AI Recommendation</div>
-      <div class="stat-value" id="ai-tip">Drive smoothly</div>
+<div class="dashboard">
+  <div class="left-panel">
+    <div id="aiTip" class="card"><h2>AI Tip</h2><p>Drive Smoothly</p></div>
+    <div class="upper-row">
+      <div id="speedCard" class="card"><h2>Speed</h2><p>0 km/h</p></div>
+      <div id="gearCard" class="card"><h2>Gear</h2><p>N</p></div>
     </div>
-    <div class="card speed-box">
-      <div class="stat-label">Recommended Speed</div>
-      <div class="stat-value" id="speed">0 km/h</div>
+    <div class="middle-row">
+      <div id="throttleCard" class="card"><h2>Throttle</h2><p>0%</p></div>
+      <div id="fuelCard" class="card"><h2>Fuel Used</h2><p>0.0 L</p></div>
     </div>
-    <div class="card gear-box">
-      <div class="stat-label">Recommended Gear</div>
-      <div class="stat-value" id="gear">0</div>
+    <div class="search-container">
+      <input type="text" id="searchBox" placeholder="Search location...">
+      <button id="micButton">🎤</button>
     </div>
-    <div class="card fuel-used-box">
-      <div class="stat-label">Fuel Used</div>
-      <div class="stat-value" id="fuel-used">0.00 L</div>
-    </div>
-    <div class="card throttle-box">
-      <div class="stat-label">Throttle</div>
-      <div class="stat-value" id="throttle">0%</div>
-    </div>
+    <div id="routePanel"></div>
   </div>
-  <div class="right">
-    <div class="map-container">
-      <div id="map" class="map"></div>
-      <button class="map-button" id="map-toggle">Full Map</button>
-      <div id="routePanel" class="route-panel"></div>
-    </div>
-    <div class="camera">
-      <img src="/video_feed" alt="Camera Feed" id="camera-feed">
-      <button class="center-button" id="enable-camera">Enable Camera</button>
-      <button class="disable-button" id="disable-camera">Disable</button>
-    </div>
-  </div>
-</div>
 
-<div id="uiContainer">
-  <input id="searchInput" placeholder="Search place or address"/>
-  <button id="addBtn">Add</button>
+  <div class="right-panel">
+    <div id="map"></div>
+    <div id="camera">Camera Feed</div>
+  </div>
 </div>
-<div id="suggestBox"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script>
 
 /* ===== Map & Icons ===== */
-const map = L.map('map').setView([19.076,72.8777],13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
-const carIcon = L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',iconSize:[42,42]});
-let userMarker=null, waypoints=[], waypointMarkers=[], routes=[], totalFuel=0;
-const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BFA5'];
+const map = L.map('map').setView([19.076, 72.8777], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+let driverMarker = L.marker([19.076, 72.8777]).addTo(map);
+let waypoints = [];
+let waypointMarkers = [];
+let routes = [];
+const colors = ['#00FF88','#0099FF','#FFCC00','#FF6699'];
 
 /* ===== Eco Advisor ===== */
 function ecoAdvisor(dist,elev,turnText){
@@ -314,106 +367,74 @@ async function checkOffRoute(latlng) {
   }
 }
 /* ===== Route creation & step-box integration ===== */
-async function createRoute(start, end, color, marker = null, index = null) {
-  // Remove duplicate routes going to the same endpoint
+async function createRoute(start, end, color) {
   const existing = routes.find(r =>
-    r.end &&
-    Math.abs(r.end.lat - end.lat) < 0.0001 &&
-    Math.abs(r.end.lng - end.lng) < 0.0001
+    Math.abs(r.end.lat - end.lat) < 0.0001 && Math.abs(r.end.lng - end.lng) < 0.0001
   );
-  if (existing) {
-    console.log("Duplicate route detected — skipping creation");
-    return;
-  }
+  if (existing) return;
 
-  const routeIndex = index !== null ? index : routes.length + 1;
-  const routeColor = color || colors[(routeIndex - 1) % colors.length];
-
+  const routeColor = color || colors[routes.length % colors.length];
   const rc = L.Routing.control({
     waypoints: [start, end],
-    router: L.Routing.osrmv1({ serviceUrl: "https://router.project-osrm.org/route/v1" }),
-    show: false,
-    addWaypoints: false,
-    createMarker: () => null,
+    router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+    show: false, addWaypoints: false, createMarker: () => null,
     lineOptions: { styles: [{ color: routeColor, weight: 5, opacity: 0.9 }] }
   }).addTo(map);
 
   const group = L.layerGroup().addTo(map);
-
   const box = document.createElement("div");
   box.className = "route-box";
   const header = document.createElement("div");
   header.className = "route-header";
   header.style.background = routeColor;
-  header.innerHTML = `<b>Route ${routeIndex}</b>
-      <button class="remove-btn" style="background:#ff4c4c;border:none;color:#fff;border-radius:50%;width:22px;height:22px;">✕</button>`;
+  header.innerHTML = `<b>Route ${routes.length+1}</b><button class="remove-btn">✕</button>`;
   const content = document.createElement("div");
   content.className = "route-content";
   content.style.display = "block";
-
-  box.appendChild(header);
-  box.appendChild(content);
+  box.appendChild(header); box.appendChild(content);
   document.getElementById("routePanel").appendChild(box);
 
-  header.onclick = e => {
-    if (!e.target.classList.contains("remove-btn"))
-      content.style.display = content.style.display === "block" ? "none" : "block";
-  };
+  header.onclick = e => { if (!e.target.classList.contains("remove-btn")) content.style.display = content.style.display === "block" ? "none" : "block"; };
+  header.querySelector(".remove-btn").onclick = e => { e.stopPropagation(); removeRoute(rc); };
 
-  header.querySelector(".remove-btn").onclick = e => {
-    e.stopPropagation();
-    removeRoute(rc);
-  };
-
-  rc.on("routesfound", async e => {
+  rc.on("routesfound", e => {
     const route = e.routes[0];
-    const coords = route.coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
-    const elevs = await getElevations(coords);
-    const steps = [];
-
-    content.innerHTML = "";
-    route.instructions.forEach((s, j) => {
-      const idxStart = s.index;
-      const idxEnd =
-        j + 1 < route.instructions.length
-          ? route.instructions[j + 1].index
-          : coords.length;
-      const segmentCoords = coords.slice(idxStart, idxEnd).map(c => [c.lat, c.lng]);
-      const elev = elevs[idxStart] || 0;
-      const stepLine = L.polyline(segmentCoords, {
-        color: routeColor,
-        weight: 5,
-        opacity: 0.5
-      }).addTo(group);
-      const eco = ecoAdvisor(s.distance, elev, s.text);
-      const item = document.createElement("div");
-      item.className = "step-item";
-      item.innerHTML = `<b>${s.text}</b>
-        <div>${(s.distance / 1000).toFixed(2)} km | Elev ${elev.toFixed(
-        1
-      )} m | Speed ${eco.speed}</div>`;
-      content.appendChild(item);
-
-      item.addEventListener("mouseenter", () => {
-        stepLine.setStyle({ color: "#00FF00", weight: 6, opacity: 0.9 });
-      });
-      item.addEventListener("mouseleave", () => {
-        stepLine.setStyle({ color: routeColor, weight: 5, opacity: 0.5 });
-      });
-      steps.push({
-        lat: coords[idxStart].lat,
-        lng: coords[idxStart].lng,
-        text: s.text,
-        elev,
-        element: item
-      });
-    });
-
-    routes.push({ rc, group, steps, color: routeColor, end, box });
+    routes.push({ rc, group, end, box, color: routeColor });
   });
 }
+  
+// ================== SPEECH RECOGNITION ==================
+let recognition;
+if ('webkitSpeechRecognition' in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = 'en-IN';
+  recognition.onresult = function(event) {
+    const speechResult = event.results[0][0].transcript;
+    document.getElementById("searchBox").value = speechResult;
+    searchLocation(speechResult);
+  };
+}
 
+document.getElementById("micButton").addEventListener("click", () => {
+  if (recognition) recognition.start();
+  else alert("Speech recognition not supported in this browser.");
+});
 
+// ================== SEARCH LOCATION ==================
+function searchLocation(query) {
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.length > 0) {
+        const loc = data[0];
+        const latlng = [parseFloat(loc.lat), parseFloat(loc.lon)];
+        createRoute(driverMarker.getLatLng(), {lat: latlng[0], lng: latlng[1]}, '#00FF88');
+        map.setView(latlng, 13);
+      } else {
+        alert("Location not found!");
+      }
+    });
+}
 /* ===== Add waypoint on map click ===== */
 map.on('click',e=>{
     const latlng=e.latlng; waypoints.push(latlng);
@@ -421,16 +442,22 @@ map.on('click',e=>{
     if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length],marker);
 });
 
-/* ===== Route Removal Helpers ===== */
+// ================== ROUTE MANAGEMENT ==================
 function removeRoute(rc) {
-  const routeIndex = routes.findIndex(r => r.rc === rc);
-  if (routeIndex !== -1) {
-    const r = routes[routeIndex];
+  const i = routes.findIndex(r => r.rc === rc);
+  if (i !== -1) {
+    const r = routes[i];
     map.removeControl(r.rc);
     map.removeLayer(r.group);
     if (r.box && r.box.parentNode) r.box.parentNode.removeChild(r.box);
-    routes.splice(routeIndex, 1);
+    routes.splice(i, 1);
+    renumberRouteBoxes();
   }
+}
+
+function renumberRouteBoxes() {
+  const boxes = document.querySelectorAll(".route-header b");
+  boxes.forEach((b, i) => b.innerText = `Route ${i+1}`);
 }
 
 function clearAllRoutes() {
@@ -442,6 +469,7 @@ function clearAllRoutes() {
   routes = [];
   document.getElementById("routePanel").innerHTML = "";
 }
+
 /* ===== Rebuild Routes ===== */
 function rebuildRoutes() {
   clearAllRoutes();
@@ -493,4 +521,5 @@ function select(i){ const f=results[i]; if(!f) return; const [lng,lat]=f.geometr
 </script>
 </body>
 </html>
+
 
