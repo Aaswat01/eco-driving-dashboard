@@ -2,404 +2,281 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Driver Dashboard — AI Eco Driving</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Eco Driving Dashboard — Unified Layout</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
-html, body {
-  margin: 0; padding: 0; font-family: 'Segoe 5UI', Arial, sans-serif;
+html,body {
+  margin:0;padding:0;height:100%;width:100%;
   background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
-  color: white; height: 100%; width: 100%; overflow: hidden;
+  color:#fff;font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;
 }
-.tabs { display: flex; gap: 0.5vw; background: #1c2b44; padding: 0.5vh 1vw; }
-.tab { padding: 0.8vh 1.8vw; cursor: pointer; border-radius: 0.8vh; background: #283550; font-weight: bold; font-size: clamp(0.8rem,1.2vw,1.2rem); transition: 0.3s; }
-.tab.active { background: #007bff; color: white; }
-.tab-content { display: none; flex: 1; box-sizing: border-box; height: calc(100% - 6vh); padding: 0; }
-.tab-content.active { display: flex; gap: 1vw; }
 
-.left { flex: 0 0 28%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.card { background: rgba(28,34,48,0.95); border-radius: 1.5vh; border: 0.2vh solid #ffffff50;
-  display: flex; flex-direction: column; justify-content: space-between; padding: 1vh 1vw; box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
-  transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
-.card:hover { transform: translateY(-0.3vh); box-shadow: 0 0.8vh 2vh rgba(0,0,0,0.5); }
-.ai-box { background:#ffa500; color:#000; }
-.speed-box { background:#4e79a7; }
-.gear-box { background:#76b7b2; color:#000; }
-.fuel-used-box { background:#c2c2c2; color:#000; }
-.throttle-box { background:#2ca02c; color:#000; }
-.stat-label { font-size: clamp(0.8rem, 1.5vw, 1.5rem); color: #fff; margin-bottom: 0.5vh; text-align: center; text-transform: uppercase; letter-spacing: 0.1vw; }
-.stat-value { font-size: clamp(1rem,2vw,2.5rem); text-align: center; padding: 0.5vh 0.5vw; background: rgba(255,255,255,0.15); border-radius: 1vh; min-width: 5vw; font-weight: bold; margin-top: auto; }
+/* ===== GRID LAYOUT ===== */
+.parent {
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  grid-template-rows:repeat(8,1fr);
+  gap:8px;
+  width:100vw;height:100vh;
+  box-sizing:border-box;
+  padding:8px;
+}
 
-.right { flex: 0 0 72%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.map-container, .camera { flex: 1; border-radius: 1.2vh; overflow: hidden; position: relative; border: 0.2vh solid rgba(255,255,255,0.3); box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3); }
-.map { width: 100%; height: 100%; border: 0; }
+/* Keep color & design from your cards */
+.box {
+  background:rgba(28,34,48,0.95);
+  border-radius:1.5vh;
+  border:0.2vh solid #ffffff50;
+  box-shadow:0 0.4vh 1.2vh rgba(0,0,0,0.3);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding:1vh 1vw;
+}
 
+/* Assigning each div like before */
+.div1{grid-column:span 4; background:#ffa500; color:#000;}
+.div2{grid-column:span 2; grid-row-start:2; background:#4e79a7;}
+.div3{grid-column:span 2; grid-column-start:3; grid-row-start:2; background:#76b7b2; color:#000;}
+.div4{grid-column:span 2; grid-row-start:3; background:#c2c2c2; color:#000;}
+.div5{grid-column:span 2; grid-column-start:3; grid-row-start:3; background:#2ca02c; color:#000;}
+.div6{grid-column:span 3; grid-row-start:4; background:#283550;}
+.div7{grid-column-start:4; grid-row-start:4; background:#283550;}
+.div8{grid-column:span 4; grid-row:span 2; grid-row-start:5; position:relative;}
+.div9{grid-column:span 4; grid-row:span 2; grid-row-start:7; position:relative;}
+
+/* Stat text */
+.stat-label {font-size:1.1vw;font-weight:bold;text-transform:uppercase;}
+.stat-value {font-size:2vw;font-weight:bold;margin-top:0.5vh;}
+
+/* Search + Mic */
+#searchInput {
+  width:80%;padding:8px 12px;border-radius:20px;border:none;background:#15161a;color:#eee;font-size:1rem;
+}
+#voiceBtn {
+  background:#4DA6FF;border:none;color:white;padding:10px 14px;border-radius:50%;cursor:pointer;margin-left:10px;
+}
+#voiceBtn:hover{background:#007bff;}
+
+/* Map + Camera */
+#map {width:100%;height:100%;border-radius:1.2vh;}
+#camera-feed {width:100%;height:100%;object-fit:cover;border-radius:1.2vh;filter:blur(12px) brightness(0.7);}
 .map-button {
-  position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
-  padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
-  color:#fff; font-weight:bold; border:none; border-radius:2vh; cursor:pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem,1vw,1rem);
+  position:absolute;bottom:1vh;left:50%;transform:translateX(-50%);
+  padding:1vh 2vw;background:linear-gradient(135deg,#00d4ff,#007bff);
+  color:#fff;font-weight:bold;border:none;border-radius:2vh;cursor:pointer;
+  box-shadow:0 0.4vh 1.2vh rgba(0,0,0,0.5);
 }
-.map-button:hover { transform: translateX(-50%) scale(1.05); background: linear-gradient(135deg,#0099ff,#005ce6); }
-
-.camera img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s ease; filter: blur(12px) brightness(0.7); }
-.camera .center-button, .camera .disable-button {
-  position: absolute; z-index: 2; padding: 1vh 2vw;
-  font-size: clamp(0.8rem,1vw,1rem); background: linear-gradient(135deg, #28a745, #1c7c31);
-  color: #fff; font-weight: bold; border: none; border-radius: 1vh; cursor: pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
-}
-.camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); }
-.camera .disable-button { top: 1vh; left: 1vw; }
-
-#uiContainer{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:1000;}
-#searchInput{width:300px;padding:10px 14px;border-radius:20px;border:none;background:#15161a;color:#eee;}
-#addBtn{background:#4DA6FF;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;}
-#suggestBox{position:absolute;top:55px;left:50%;transform:translateX(-50%);width:340px;background:#1c1c24;border-radius:10px;overflow:auto;z-index:1001;display:none;}
-.suggest-item{padding:10px;border-bottom:1px solid #222;cursor:pointer;}
-
-/* ---- Route panel inside map container ---- */
-.route-panel{
-  position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
-  z-index:1000; background:#181920; border-radius:10px; padding:5px;
-  transition: all 0.3s; display:flex; flex-direction:column;
-}
-.route-box{background:#252530;border-radius:8px;margin-bottom:8px;border:1px solid #2a2a36;overflow:hidden;}
-.route-header{background:#2e323a;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
-.route-content{display:none;padding:6px;background:#1f2228;max-height:200px;overflow-y:auto;}
-.step-item{background:#1f2228;border-radius:6px;padding:6px;margin-bottom:4px;font-size:12px;}
-@media (max-width: 1200px) {
-  .tab-content.active { flex-direction: column; }
-  .left, .right { flex: 1 1 100%; height: auto; }
-  .map-container, .camera { flex: 0 0 45%; }
+.map-button:hover{transform:translateX(-50%) scale(1.05);}
+.camera-button {
+  position:absolute;top:1vh;left:1vh;
+  padding:0.8vh 1.6vw;background:linear-gradient(135deg,#28a745,#1c7c31);
+  color:#fff;border:none;border-radius:1vh;cursor:pointer;font-weight:bold;
+  box-shadow:0 0.4vh 1vh rgba(0,0,0,0.5);
 }
 </style>
 </head>
 <body>
-<div class="tabs">
-  <div class="tab active" data-tab="dashboard">Dashboard</div>
-</div>
-<div class="tab-content active" id="dashboard">
-  <div class="left">
-    <div class="card ai-box">
-      <div class="stat-label">AI Recommendation</div>
-      <div class="stat-value" id="ai-tip">Drive smoothly</div>
-    </div>
-    <div class="card speed-box">
-      <div class="stat-label">Recommended Speed</div>
-      <div class="stat-value" id="speed">0 km/h</div>
-    </div>
-    <div class="card gear-box">
-      <div class="stat-label">Recommended Gear</div>
-      <div class="stat-value" id="gear">0</div>
-    </div>
-    <div class="card fuel-used-box">
-      <div class="stat-label">Fuel Used</div>
-      <div class="stat-value" id="fuel-used">0.00 L</div>
-    </div>
-    <div class="card throttle-box">
-      <div class="stat-label">Throttle</div>
-      <div class="stat-value" id="throttle">0%</div>
-    </div>
+
+<div class="parent">
+
+  <div class="box div1">
+    <div class="stat-label">AI Recommendation</div>
+    <div class="stat-value" id="ai-tip">Drive smoothly</div>
   </div>
-  <div class="right">
-    <div class="map-container">
-      <div id="map" class="map"></div>
-      <button class="map-button" id="map-toggle">Full Map</button>
-      <div id="routePanel" class="route-panel"></div>
-    </div>
-    <div class="camera">
-      <img src="/video_feed" alt="Camera Feed" id="camera-feed">
-      <button class="center-button" id="enable-camera">Enable Camera</button>
-      <button class="disable-button" id="disable-camera">Disable</button>
-    </div>
+
+  <div class="box div2">
+    <div class="stat-label">Speed</div>
+    <div class="stat-value" id="speed">0 km/h</div>
   </div>
+
+  <div class="box div3">
+    <div class="stat-label">Gear</div>
+    <div class="stat-value" id="gear">0</div>
+  </div>
+
+  <div class="box div4">
+    <div class="stat-label">Fuel Used</div>
+    <div class="stat-value" id="fuel-used">0.00 L</div>
+  </div>
+
+  <div class="box div5">
+    <div class="stat-label">Throttle</div>
+    <div class="stat-value" id="throttle">0%</div>
+  </div>
+
+  <div class="box div6">
+    <input id="searchInput" placeholder="Search destination..."/>
+  </div>
+
+  <div class="box div7">
+    <button id="voiceBtn">🎤</button>
+  </div>
+
+  <div class="box div8">
+    <div id="map"></div>
+    <button class="map-button" id="map-toggle">Full Map</button>
+  </div>
+
+  <div class="box div9">
+    <img src="/video_feed" id="camera-feed" alt="Camera Feed"/>
+    <button class="camera-button" id="toggleCam">Enable Camera</button>
+  </div>
+
 </div>
 
-<div id="uiContainer">
-  <input id="searchInput" placeholder="Search place or address"/>
-  <button id="addBtn">Add</button>
-</div>
-<div id="suggestBox"></div>
+<!-- ROUTE PANEL -->
+<div id="routePanel" style="position:absolute;top:10px;right:10px;width:300px;max-height:90%;overflow:auto;z-index:1000;background:#181920;border-radius:10px;padding:6px;"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-<script>
 
-/* ===== Map & Icons ===== */
+<script>
+/* === MAP SETUP === */
 const map = L.map('map').setView([19.076,72.8777],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
-const carIcon = L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',iconSize:[42,42]});
+const carIcon=L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',iconSize:[42,42]});
 let userMarker=null, waypoints=[], waypointMarkers=[], routes=[], totalFuel=0;
-const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BFA5'];
+const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#9B59B6','#00BFA5'];
 
-/* ===== Eco Advisor ===== */
-function ecoAdvisor(dist,elev,turnText){
-    const t=(turnText||'').toLowerCase();
-    let tip="Drive smoothly", speed=50, gear=3, throttle=45;
-
-    // Road type detection
-    const roadType=t.includes("highway")?"highway":
-                   t.includes("city")?"city":
-                   t.includes("roundabout")?"roundabout":"normal";
-
-    if(t.includes("left")||t.includes("right")) { speed=25; gear=2; throttle=35; tip="Slow for turn"; }
-    else if(elev>6) { speed=30; gear=2; throttle=55; tip="Uphill — maintain torque"; }
-    else if(elev<-6){ speed=55; gear=5; throttle=25; tip="Downhill — coast gently"; }
-    else if(dist>800){ speed=65; gear=5; throttle=50; tip="Long straight — steady speed"; }
-    else if(dist>300){ speed=55; gear=4; throttle=45; tip="Smooth cruising"; }
-
-    // Adjustments by road type
-    if(roadType==="highway"){ speed=Math.min(speed,80); gear=Math.max(gear,5); throttle=50; tip+=" — highway"; }
-    else if(roadType==="city"){ speed=Math.min(speed,50); gear=Math.min(gear,3); throttle=40; tip+=" — city"; }
-    else if(roadType==="roundabout"){ speed=25; gear=2; throttle=35; tip+=" — roundabout"; }
-
-    // Fuel saving hints
-    if(speed>70) tip="High speed — reduce for fuel saving";
-    if(throttle>60 && elev>3) tip="High throttle uphill — shift earlier";
-
-    return {speed, gear, throttle, tip};
-}
-
-/* ===== Driver Behavior Monitoring ===== */
-let driverStats={overspeed:0, harshAccel:0, totalPoints:0};
-function updateDriverBehavior(currentSpeed,eco){
-    driverStats.totalPoints++;
-    if(currentSpeed>eco.speed+5) driverStats.overspeed++;
-    
-    const lastThrottle=document.getElementById("throttle").dataset.lastThrottle||0;
-    const currentThrottle=eco.throttle;
-    if(Math.abs(currentThrottle-lastThrottle)>25) driverStats.harshAccel++;
-    document.getElementById("throttle").dataset.lastThrottle=currentThrottle;
-
-    if(driverStats.overspeed/driverStats.totalPoints>0.3) eco.tip+=" — Slow down! Overspeed habit detected";
-    if(driverStats.harshAccel/driverStats.totalPoints>0.2) eco.tip+=" — Smooth throttle for fuel saving";
-}
-
-/* ===== Elevation API ===== */
+/* === ELEVATION FETCH === */
 async function getElevations(coords){
-    try{
-        const locs=coords.map(p=>`${p.lat},${p.lng}`).join('|');
-        const r=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${encodeURIComponent(locs)}`);
-        const d=await r.json();
-        return d.results.map(x=>x.elevation);
-    }catch{return new Array(coords.length).fill(0);}
+  try{
+    const locs=coords.map(p=>`${p.lat},${p.lng}`).join('|');
+    const r=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${encodeURIComponent(locs)}`);
+    const d=await r.json();
+    return d.results.map(x=>x.elevation);
+  }catch{return new Array(coords.length).fill(0);}
 }
 
-
-/* ===== Multi-Step Route Awareness ===== */
-async function getUpcomingSteps(latlng, maxSteps=5){
-  if(!routes.length) return [];
-  const upcomingSteps=[];
-  routes.forEach(r=>{
-    let nearestIdx=-1, minDist=Infinity;
-    r.steps.forEach((s,i)=>{
-      const d=latlng.distanceTo([s.lat,s.lng]);
-      if(d<minDist){ minDist=d; nearestIdx=i; }
-    });
-    if(nearestIdx!==-1){
-      for(let j=nearestIdx; j<Math.min(r.steps.length, nearestIdx+maxSteps); j++){
-        upcomingSteps.push(r.steps[j]);
-      }
-    }
-  });
-  return upcomingSteps;
+/* === ECO ADVISOR === */
+function ecoAdvisor(dist,elev,turnText,surface="asphalt"){
+  let tip="Drive smoothly",speed=50,gear=3,throttle=45;
+  const t=(turnText||"").toLowerCase();
+  if(t.includes("left")||t.includes("right")){speed=25;gear=2;throttle=35;tip="Slow for turn";}
+  else if(elev>5){speed=30;gear=2;throttle=55;tip="Uphill — more torque";}
+  else if(elev<-5){speed=55;gear=5;throttle=25;tip="Downhill — coast";}
+  else if(dist>800){speed=65;gear=5;throttle=50;tip="Long straight — steady speed";}
+  if(surface!=="asphalt"){speed-=10;tip+=" — rough surface";}
+  return {speed,gear,throttle,tip};
 }
 
-async function adaptiveAIDashboard(latlng,heading){
-    const currentSpeed = calculateGPSSpeed(latlng);
-    const slopeData=await predictElevation(latlng,heading);
-    const slope=slopeData.slope;
-
-    let eco={speed:50,gear:3,throttle:45,tip:"Drive smoothly"};
-
-    if(routes.length){
-        // Predict 3–5 steps ahead based on route steps
-        const upcomingSteps=[];
-        routes.forEach(r=>{
-            r.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<500) upcomingSteps.push(s); });
-        });
-        upcomingSteps.slice(0,5).forEach(step=>{
-            const stepSlope=step.elev-recentElevations[0]||slope;
-            const stepEco=ecoAdvisor(step.distance,stepSlope,step.text);
-            eco=stepEco; // adopt last relevant step for dashboard
-            if(step.element) step.element.title=`Tip: ${stepEco.tip}, Speed: ${stepEco.speed}, Gear: ${stepEco.gear}, Throttle: ${stepEco.throttle}%`;
-        });
-    }
-
-    updateDriverBehavior(currentSpeed,eco);
-
-    document.getElementById("speed").textContent = eco.speed+" km/h";
-    document.getElementById("gear").textContent = eco.gear;
-    document.getElementById("throttle").textContent = eco.throttle+"%";
-    document.getElementById("ai-tip").textContent = eco.tip;
-    totalFuel += (eco.throttle/1000);
-    document.getElementById("fuel-used").textContent = totalFuel.toFixed(2)+" L";
-}
-
-/* ===== GPS speed and idle detection ===== */
-let lastLatLng=null, lastGPSPos=null, lastGPSTime=null, idleStart=null;
-const IDLE_THRESHOLD=3, IDLE_TIME=60;
-function checkIdle(latlng){
-    if(!lastLatLng){ lastLatLng=latlng; idleStart=Date.now(); return false; }
-    const dist=latlng.distanceTo(lastLatLng);
-    if(dist<IDLE_THRESHOLD){ if(!idleStart) idleStart=Date.now(); return (Date.now()-idleStart)/1000 >= IDLE_TIME; }
-    lastLatLng=latlng; idleStart=null; return false;
-}
-function calculateGPSSpeed(latlng){
-    const now=Date.now();
-    if(lastGPSPos && lastGPSTime){
-        const dist=latlng.distanceTo(lastGPSPos);
-        const dt=(now-lastGPSTime)/1000;
-        lastGPSPos=latlng; lastGPSTime=now;
-        return (dist/dt)*3.6;
-    }else{ lastGPSPos=latlng; lastGPSTime=now; return 0; }
-}
-
-/* ===== Predict multi-step elevation ahead ===== */
-const ELEVATION_LOOKAHEAD=5, ELEVATION_STEP=10;
-let recentElevations=[];
-async function predictElevation(latlng,heading){
-    const R=6378137, pointsAhead=[];
-    for(let i=1;i<=ELEVATION_LOOKAHEAD;i++){
-        const d=ELEVATION_STEP*i;
-        const latRad=latlng.lat*Math.PI/180;
-        const lonRad=latlng.lng*Math.PI/180;
-        const newLat=latRad+(d*Math.cos(heading*Math.PI/180))/R;
-        const newLng=lonRad+(d*Math.sin(heading*Math.PI/180))/(R*Math.cos(latRad));
-        pointsAhead.push({lat:newLat*180/Math.PI,lng:newLng*180/Math.PI});
-    }
-    const elevs=await getElevations(pointsAhead);
-    recentElevations=elevs;
-    const smoothSlope = elevs.reduce((a,b,i,arr)=>i===0?a: a + (b-arr[i-1]),0)/(elevs.length-1);
-    const throttleCurve=elevs.map((e,i)=>{ const delta=i===0?0:e-elevs[i-1]; return delta>3?60: delta<-3?25:45; });
-    return {elevs, slope:smoothSlope, throttleCurve};
-}
-/* ===== GPS Watch ===== */
-if(navigator.geolocation){
-    navigator.geolocation.watchPosition(async pos=>{
-        const latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
-        const heading=pos.coords.heading||0;
-        if(!waypoints.length) waypoints.push(latlng); else waypoints[0]=latlng;
-        if(!userMarker){ userMarker=L.marker(latlng,{icon:carIcon}).addTo(map); map.setView(latlng,14); }
-        else userMarker.setLatLng(latlng);
-        await adaptiveAIDashboard(latlng,heading);
-        checkOffRoute(latlng);
-    },()=>console.warn("GPS unavailable"),{enableHighAccuracy:true});
-}
-
-/* ===== Off-route adaptation ===== */
-async function checkOffRoute(latlng){
-    if(routes.length){
-        const nearestRoute=routes[0];
-        let minDist=Infinity;
-        nearestRoute.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<minDist) minDist=d; });
-        if(minDist>30){
-            console.log("Off-route detected — recalculating");
-            if(waypoints.length>=1){
-                const lastWaypoint=waypoints[waypoints.length-1];
-                createRoute(latlng,lastWaypoint,colors[routes.length%colors.length]);
-            }
-        }
-    }
-}
-
-/* ===== Route creation & step-box integration ===== */
-async function createRoute(start,end,color,marker=null,index=null){
-    const routeIndex=index!==null?index:routes.length+1;
-    const routeColor=color||colors[(routeIndex-1)%colors.length];
-    const rc=L.Routing.control({
-        waypoints:[start,end],
-        router:L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'}),
-        show:false, addWaypoints:false, createMarker:()=>null,
-        lineOptions:{styles:[{color:routeColor,weight:5,opacity:0.9}]}
-    }).addTo(map);
-    const group=L.layerGroup().addTo(map);
-    const box=document.createElement('div'); box.className='route-box';
-    const header=document.createElement('div'); header.className='route-header';
-    header.style.background=routeColor; header.innerHTML=`<b>Route ${routeIndex}</b><button style="background:#ff4c4c;border:none;color:#fff;border-radius:50%;width:22px;height:22px;">✕</button>`;
-    const content=document.createElement('div'); content.className='route-content'; content.style.display='block';
-    box.appendChild(header); box.appendChild(content);
-    document.getElementById('routePanel').appendChild(box);
-    header.onclick=()=>content.style.display=content.style.display==='block'?'none':'block';
-    header.querySelector('button').onclick=(e)=>{
-        e.stopPropagation(); map.removeControl(rc); map.removeLayer(group); box.remove();
-        const idx=routes.findIndex(r=>r.rc===rc); if(idx!==-1) routes.splice(idx,1);
-        if(marker){ const wpIdx=waypointMarkers.indexOf(marker); if(wpIdx!==-1){ map.removeLayer(marker); waypointMarkers.splice(wpIdx,1); waypoints.splice(wpIdx+1,1); } }
-        rebuildRoutes();
-    };
-    rc.on('routesfound', async e=>{
-        const route=e.routes[0]; const coords=route.coordinates.map(c=>({lat:c.lat,lng:c.lng}));
-        const elevs=await getElevations(coords); const steps=[];
-        content.innerHTML='';
-        route.instructions.forEach((s,j)=>{
-            const idxStart=s.index;
-            const idxEnd=j+1<route.instructions.length?route.instructions[j+1].index:coords.length;
-            const segmentCoords=coords.slice(idxStart,idxEnd).map(c=>[c.lat,c.lng]);
-            const elev=elevs[idxStart]||0;
-            const stepLine = L.polyline(segmentCoords, {color: routeColor, weight:5, opacity:0.5}).addTo(group);
-            const eco=ecoAdvisor(s.distance,elev,s.text);
-            const item=document.createElement('div');
-            item.innerHTML=`<b>${s.text}</b><div>${(s.distance/1000).toFixed(2)} km | Elev ${elev.toFixed(1)} m | Speed ${eco.speed}</div>`;
-            content.appendChild(item);
-            item.addEventListener('mouseenter',()=>{ stepLine.setStyle({color:'#00FF00',weight:6,opacity:0.9}); });
-            item.addEventListener('mouseleave',()=>{ stepLine.setStyle({color:routeColor,weight:5,opacity:0.5}); });
-            steps.push({lat:coords[idxStart].lat,lng:coords[idxStart].lng,text:s.text,elev,element:item});
-        });
-        routes.push({rc,group,steps,color:routeColor});
-    });
-}
-
-/* ===== Add waypoint on map click ===== */
-map.on('click',e=>{
-    const latlng=e.latlng; waypoints.push(latlng);
-    const marker=L.marker(latlng).addTo(map); waypointMarkers.push(marker);
-    if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length],marker);
-});
-
-/* ===== Rebuild Routes ===== */
-function rebuildRoutes(){
-    routes.forEach(r=>{ map.removeControl(r.rc); map.removeLayer(r.group); });
-    routes=[]; document.getElementById('routePanel').innerHTML='';
-    if(waypoints.length<2) return;
-    for(let i=1;i<waypoints.length;i++){ createRoute(waypoints[i-1],waypoints[i],colors[(i-1)%colors.length],waypointMarkers[i-1],i); }
-}
-
-
-/* ===== Map Toggle ===== */
-let mapFull=false;
-document.getElementById("map-toggle").addEventListener("click",()=>{
-  const mapContainer=document.querySelector(".map-container");
-  const camera=document.querySelector(".camera");
-  const button=document.getElementById("map-toggle");
-  if(!mapFull){
-    mapContainer.style.position="fixed"; mapContainer.style.top="0"; mapContainer.style.left="0"; mapContainer.style.width="100vw"; mapContainer.style.height="100vh"; mapContainer.style.zIndex="2000";
-    camera.style.display="none"; button.innerText="Restore Map"; mapFull=true; setTimeout(()=>map.invalidateSize(),300);
-  }else{
-    mapContainer.style.position=""; mapContainer.style.width=""; mapContainer.style.height=""; mapContainer.style.zIndex="";
-    camera.style.display="block"; button.innerText="Full Map"; mapFull=false; setTimeout(()=>map.invalidateSize(),300);
+/* === MULTI-STEP LOOKAHEAD === */
+async function analyzeRouteSteps(latlng){
+  if(!routes.length) return;
+  const route=routes[0]; let nearest=-1,minDist=1e9;
+  route.steps.forEach((s,i)=>{const d=latlng.distanceTo([s.lat,s.lng]);if(d<minDist){minDist=d;nearest=i;}});
+  const nextSteps=route.steps.slice(nearest,nearest+5);
+  for(const s of nextSteps){
+    const elevDiff=s.elev - (route.steps[nearest]?.elev||s.elev);
+    const eco=ecoAdvisor(s.distance,elevDiff,s.text,s.surface);
+    document.getElementById("speed").textContent=eco.speed+" km/h";
+    document.getElementById("gear").textContent=eco.gear;
+    document.getElementById("throttle").textContent=eco.throttle+"%";
+    document.getElementById("ai-tip").textContent=eco.tip;
+    totalFuel+=eco.throttle/1200;
+    document.getElementById("fuel-used").textContent=totalFuel.toFixed(2)+" L";
   }
+}
+
+/* === ROUTE CREATION === */
+async function createRoute(start,end,color){
+  const routeColor=color||colors[routes.length%colors.length];
+  const rc=L.Routing.control({
+    waypoints:[start,end],
+    router:L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'}),
+    show:false,addWaypoints:false,createMarker:()=>null,
+    lineOptions:{styles:[{color:routeColor,weight:5,opacity:0.9}]}
+  }).addTo(map);
+  const group=L.layerGroup().addTo(map);
+  const routeBox=document.createElement('div');
+  routeBox.style.background="#252530";routeBox.style.marginBottom="6px";routeBox.style.padding="4px";routeBox.innerHTML=`<b style="color:${routeColor}">Route ${routes.length+1}</b>`;
+  document.getElementById("routePanel").appendChild(routeBox);
+  rc.on('routesfound',async e=>{
+    const route=e.routes[0];
+    const coords=route.coordinates.map(c=>({lat:c.lat,lng:c.lng}));
+    const elevs=await getElevations(coords);
+    const steps=[];
+    route.instructions.forEach((s,i)=>{
+      const elev=elevs[s.index]||0;
+      const step={lat:coords[s.index].lat,lng:coords[s.index].lng,text:s.text,distance:s.distance,elev,surface:"asphalt"};
+      steps.push(step);
+    });
+    routes.push({rc,steps,color:routeColor});
+  });
+}
+
+/* === MAP CLICK === */
+map.on('click',e=>{
+  waypoints.push(e.latlng);
+  const marker=L.marker(e.latlng).addTo(map);waypointMarkers.push(marker);
+  if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],e.latlng,colors[routes.length%colors.length]);
 });
 
-/* ===== Camera Toggle ===== */
-const camImg=document.getElementById("camera-feed");
-document.getElementById("enable-camera").onclick=()=>{ camImg.style.filter="none"; document.getElementById("enable-camera").style.display="none"; document.getElementById("disable-camera").style.display="block"; }
-document.getElementById("disable-camera").onclick=()=>{ camImg.style.filter="blur(12px) brightness(0.7)"; document.getElementById("enable-camera").style.display="block"; document.getElementById("disable-camera").style.display="none"; }
+/* === GPS === */
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition(async pos=>{
+    const latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
+    if(!userMarker) userMarker=L.marker(latlng,{icon:carIcon}).addTo(map);
+    else userMarker.setLatLng(latlng);
+    analyzeRouteSteps(latlng);
+  },()=>{}, {enableHighAccuracy:true});
+}
 
-/* ===== Search UI ===== */
-const input=document.getElementById('searchInput'),suggestBox=document.getElementById('suggestBox');
-let results=[];
-input.oninput=async()=>{
-  const q=input.value.trim(); if(!q) return suggestBox.style.display='none';
-  const d=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`).then(r=>r.json()).catch(()=>({features:[]})); results=d.features||[];
-  suggestBox.innerHTML=''; results.forEach((f,i)=>{ const p=f.properties||{},name=p.name||p.city||'Unknown'; const div=document.createElement('div'); div.className='suggest-item'; div.innerHTML=`<b>${name}</b><div style="font-size:12px;color:#bbb;">${[p.city,p.state,p.country].filter(Boolean).join(', ')}</div>`; div.onclick=()=>select(i); suggestBox.appendChild(div); });
-  suggestBox.style.display=results.length?'block':'none';
+/* === FULL MAP TOGGLE === */
+let mapFull=false;
+document.getElementById("map-toggle").onclick=()=>{
+  const mapBox=document.querySelector(".div8");
+  if(!mapFull){
+    mapBox.style.position="fixed";mapBox.style.top="0";mapBox.style.left="0";
+    mapBox.style.width="100vw";mapBox.style.height="100vh";mapBox.style.zIndex="3000";
+    document.getElementById("map-toggle").innerText="Resize";
+    mapFull=true;setTimeout(()=>map.invalidateSize(),400);
+  }else{
+    mapBox.style.position="";mapBox.style.width="";mapBox.style.height="";mapBox.style.zIndex="";
+    document.getElementById("map-toggle").innerText="Full Map";
+    mapFull=false;setTimeout(()=>map.invalidateSize(),400);
+  }
 };
-document.addEventListener('click',e=>{if(!suggestBox.contains(e.target)&&e.target!==input) suggestBox.style.display='none';});
-document.getElementById('addBtn').onclick=()=>{if(results.length) select(0);};
-input.addEventListener('keydown',e=>{if(e.key==='Enter'&&results.length) select(0);});
-function select(i){ const f=results[i]; if(!f) return; const [lng,lat]=f.geometry.coordinates,latlng=L.latLng(lat,lng); waypoints.push(latlng); L.marker(latlng).addTo(map); suggestBox.style.display='none'; input.value=''; if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length]); }
+
+/* === CAMERA TOGGLE === */
+const cam=document.getElementById("camera-feed");
+document.getElementById("toggleCam").onclick=()=>{
+  if(cam.style.filter.includes("blur")){cam.style.filter="none";document.getElementById("toggleCam").innerText="Disable Camera";}
+  else{cam.style.filter="blur(12px) brightness(0.7)";document.getElementById("toggleCam").innerText="Enable Camera";}
+};
+
+/* === VOICE SEARCH === */
+const voiceBtn=document.getElementById("voiceBtn");
+const input=document.getElementById("searchInput");
+if('webkitSpeechRecognition' in window){
+  const recog=new webkitSpeechRecognition();
+  recog.lang='en-US';
+  recog.onresult=e=>{
+    input.value=e.results[0][0].transcript;
+    performSearch(input.value);
+  };
+  voiceBtn.onclick=()=>recog.start();
+}else{
+  voiceBtn.disabled=true;
+  voiceBtn.textContent='No Mic';
+}
+
+async function performSearch(query){
+  if(!query) return;
+  const res=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`);
+  const d=await res.json();
+  if(d.features&&d.features.length){
+    const [lng,lat]=d.features[0].geometry.coordinates;
+    const latlng=L.latLng(lat,lng);
+    waypoints.push(latlng);L.marker(latlng).addTo(map);
+    if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length]);
+  }
+}
 </script>
 </body>
 </html>
