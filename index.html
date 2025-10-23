@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
 html, body {
-margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif;
-background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
-color: white; height: 100%; width: 100%; overflow: hidden;
+  margin: 0; padding: 0; font-family: 'Segoe 5UI', Arial, sans-serif;
+  background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
+  color: white; height: 100%; width: 100%; overflow: hidden;
 }
 .tabs { display: flex; gap: 0.5vw; background: #1c2b44; padding: 0.5vh 1vw; }
 .tab { padding: 0.8vh 1.8vw; cursor: pointer; border-radius: 0.8vh; background: #283550; font-weight: bold; font-size: clamp(0.8rem,1.2vw,1.2rem); transition: 0.3s; }
@@ -20,8 +20,8 @@ color: white; height: 100%; width: 100%; overflow: hidden;
 
 .left { flex: 0 0 28%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
 .card { background: rgba(28,34,48,0.95); border-radius: 1.5vh; border: 0.2vh solid #ffffff50;
-display: flex; flex-direction: column; justify-content: space-between; padding: 1vh 1vw; box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
-transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
+  display: flex; flex-direction: column; justify-content: space-between; padding: 1vh 1vw; box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
+  transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
 .card:hover { transform: translateY(-0.3vh); box-shadow: 0 0.8vh 2vh rgba(0,0,0,0.5); }
 .ai-box { background:#ffa500; color:#000; }
 .speed-box { background:#4e79a7; }
@@ -36,19 +36,19 @@ transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
 .map { width: 100%; height: 100%; border: 0; }
 
 .map-button {
-position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
-padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
-color:#fff; font-weight:bold; border:none; border-radius:2vh; cursor:pointer;
-box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem,1vw,1rem);
+  position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
+  padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
+  color:#fff; font-weight:bold; border:none; border-radius:2vh; cursor:pointer;
+  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem,1vw,1rem);
 }
 .map-button:hover { transform: translateX(-50%) scale(1.05); background: linear-gradient(135deg,#0099ff,#005ce6); }
 
 .camera img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s ease; filter: blur(12px) brightness(0.7); }
 .camera .center-button, .camera .disable-button {
-position: absolute; z-index: 2; padding: 1vh 2vw;
-font-size: clamp(0.8rem,1vw,1rem); background: linear-gradient(135deg, #28a745, #1c7c31);
-color: #fff; font-weight: bold; border: none; border-radius: 1vh; cursor: pointer;
-box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
+  position: absolute; z-index: 2; padding: 1vh 2vw;
+  font-size: clamp(0.8rem,1vw,1rem); background: linear-gradient(135deg, #28a745, #1c7c31);
+  color: #fff; font-weight: bold; border: none; border-radius: 1vh; cursor: pointer;
+  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
 }
 .camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); }
 .camera .disable-button { top: 1vh; left: 1vw; }
@@ -61,65 +61,65 @@ box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
 
 /* ---- Route panel inside map container ---- */
 .route-panel{
-position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
-z-index:1000; background:#181920; border-radius:10px; padding:5px;
-transition: all 0.3s; display:flex; flex-direction:column;
+  position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
+  z-index:1000; background:#181920; border-radius:10px; padding:5px;
+  transition: all 0.3s; display:flex; flex-direction:column;
 }
 .route-box{background:#252530;border-radius:8px;margin-bottom:8px;border:1px solid #2a2a36;overflow:hidden;}
 .route-header{background:#2e323a;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 .route-content{display:none;padding:6px;background:#1f2228;max-height:200px;overflow-y:auto;}
 .step-item{background:#1f2228;border-radius:6px;padding:6px;margin-bottom:4px;font-size:12px;}
 @media (max-width: 1200px) {
-.tab-content.active { flex-direction: column; }
-.left, .right { flex: 1 1 100%; height: auto; }
-.map-container, .camera { flex: 0 0 45%; }
+  .tab-content.active { flex-direction: column; }
+  .left, .right { flex: 1 1 100%; height: auto; }
+  .map-container, .camera { flex: 0 0 45%; }
 }
 </style>
 </head>
 <body>
 <div class="tabs">
-<div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
 </div>
 <div class="tab-content active" id="dashboard">
-<div class="left">
-<div class="card ai-box">
-<div class="stat-label">AI Recommendation</div>
-<div class="stat-value" id="ai-tip">Drive smoothly</div>
-</div>
-<div class="card speed-box">
-<div class="stat-label">Recommended Speed</div>
-<div class="stat-value" id="speed">0 km/h</div>
-</div>
-<div class="card gear-box">
-<div class="stat-label">Recommended Gear</div>
-<div class="stat-value" id="gear">0</div>
-</div>
-<div class="card fuel-used-box">
-<div class="stat-label">Fuel Used</div>
-<div class="stat-value" id="fuel-used">0.00 L</div>
-</div>
-<div class="card throttle-box">
-<div class="stat-label">Throttle</div>
-<div class="stat-value" id="throttle">0%</div>
-</div>
-</div>
-<div class="right">
-<div class="map-container">
-<div id="map" class="map"></div>
-<button class="map-button" id="map-toggle">Full Map</button>
-<div id="routePanel" class="route-panel"></div>
-</div>
-<div class="camera">
-<img src="/video_feed" alt="Camera Feed" id="camera-feed">
-<button class="center-button" id="enable-camera">Enable Camera</button>
-<button class="disable-button" id="disable-camera">Disable</button>
-</div>
-</div>
+  <div class="left">
+    <div class="card ai-box">
+      <div class="stat-label">AI Recommendation</div>
+      <div class="stat-value" id="ai-tip">Drive smoothly</div>
+    </div>
+    <div class="card speed-box">
+      <div class="stat-label">Recommended Speed</div>
+      <div class="stat-value" id="speed">0 km/h</div>
+    </div>
+    <div class="card gear-box">
+      <div class="stat-label">Recommended Gear</div>
+      <div class="stat-value" id="gear">0</div>
+    </div>
+    <div class="card fuel-used-box">
+      <div class="stat-label">Fuel Used</div>
+      <div class="stat-value" id="fuel-used">0.00 L</div>
+    </div>
+    <div class="card throttle-box">
+      <div class="stat-label">Throttle</div>
+      <div class="stat-value" id="throttle">0%</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="map-container">
+      <div id="map" class="map"></div>
+      <button class="map-button" id="map-toggle">Full Map</button>
+      <div id="routePanel" class="route-panel"></div>
+    </div>
+    <div class="camera">
+      <img src="/video_feed" alt="Camera Feed" id="camera-feed">
+      <button class="center-button" id="enable-camera">Enable Camera</button>
+      <button class="disable-button" id="disable-camera">Disable</button>
+    </div>
+  </div>
 </div>
 
 <div id="uiContainer">
-<input id="searchInput" placeholder="Search place or address"/>
-<button id="addBtn">Add</button>
+  <input id="searchInput" placeholder="Search place or address"/>
+  <button id="addBtn">Add</button>
 </div>
 <div id="suggestBox"></div>
 
@@ -136,157 +136,157 @@ const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BF
 
 /* ===== Eco Advisor ===== */
 function ecoAdvisor(dist,elev,turnText){
-const t=(turnText||'').toLowerCase();
-let tip="Drive smoothly", speed=50, gear=3, throttle=45;
+    const t=(turnText||'').toLowerCase();
+    let tip="Drive smoothly", speed=50, gear=3, throttle=45;
 
-// Road type detection
-const roadType=t.includes("highway")?"highway":
-t.includes("city")?"city":
-t.includes("roundabout")?"roundabout":"normal";
+    // Road type detection
+    const roadType=t.includes("highway")?"highway":
+                   t.includes("city")?"city":
+                   t.includes("roundabout")?"roundabout":"normal";
 
-if(t.includes("left")||t.includes("right")) { speed=25; gear=2; throttle=35; tip="Slow for turn"; }
-else if(elev>6) { speed=30; gear=2; throttle=55; tip="Uphill — maintain torque"; }
-else if(elev<-6){ speed=55; gear=5; throttle=25; tip="Downhill — coast gently"; }
-else if(dist>800){ speed=65; gear=5; throttle=50; tip="Long straight — steady speed"; }
-else if(dist>300){ speed=55; gear=4; throttle=45; tip="Smooth cruising"; }
+    if(t.includes("left")||t.includes("right")) { speed=25; gear=2; throttle=35; tip="Slow for turn"; }
+    else if(elev>6) { speed=30; gear=2; throttle=55; tip="Uphill — maintain torque"; }
+    else if(elev<-6){ speed=55; gear=5; throttle=25; tip="Downhill — coast gently"; }
+    else if(dist>800){ speed=65; gear=5; throttle=50; tip="Long straight — steady speed"; }
+    else if(dist>300){ speed=55; gear=4; throttle=45; tip="Smooth cruising"; }
 
-// Adjustments by road type
-if(roadType==="highway"){ speed=Math.min(speed,80); gear=Math.max(gear,5); throttle=50; tip+=" — highway"; }
-else if(roadType==="city"){ speed=Math.min(speed,50); gear=Math.min(gear,3); throttle=40; tip+=" — city"; }
-else if(roadType==="roundabout"){ speed=25; gear=2; throttle=35; tip+=" — roundabout"; }
+    // Adjustments by road type
+    if(roadType==="highway"){ speed=Math.min(speed,80); gear=Math.max(gear,5); throttle=50; tip+=" — highway"; }
+    else if(roadType==="city"){ speed=Math.min(speed,50); gear=Math.min(gear,3); throttle=40; tip+=" — city"; }
+    else if(roadType==="roundabout"){ speed=25; gear=2; throttle=35; tip+=" — roundabout"; }
 
-// Fuel saving hints
-if(speed>70) tip="High speed — reduce for fuel saving";
-if(throttle>60 && elev>3) tip="High throttle uphill — shift earlier";
+    // Fuel saving hints
+    if(speed>70) tip="High speed — reduce for fuel saving";
+    if(throttle>60 && elev>3) tip="High throttle uphill — shift earlier";
 
-return {speed, gear, throttle, tip};
+    return {speed, gear, throttle, tip};
 }
 
 /* ===== Driver Behavior Monitoring ===== */
 let driverStats={overspeed:0, harshAccel:0, totalPoints:0};
 function updateDriverBehavior(currentSpeed,eco){
-driverStats.totalPoints++;
-if(currentSpeed>eco.speed+5) driverStats.overspeed++;
+    driverStats.totalPoints++;
+    if(currentSpeed>eco.speed+5) driverStats.overspeed++;
+    
+    const lastThrottle=document.getElementById("throttle").dataset.lastThrottle||0;
+    const currentThrottle=eco.throttle;
+    if(Math.abs(currentThrottle-lastThrottle)>25) driverStats.harshAccel++;
+    document.getElementById("throttle").dataset.lastThrottle=currentThrottle;
 
-const lastThrottle=document.getElementById("throttle").dataset.lastThrottle||0;
-const currentThrottle=eco.throttle;
-if(Math.abs(currentThrottle-lastThrottle)>25) driverStats.harshAccel++;
-document.getElementById("throttle").dataset.lastThrottle=currentThrottle;
-
-if(driverStats.overspeed/driverStats.totalPoints>0.3) eco.tip+=" — Slow down! Overspeed habit detected";
-if(driverStats.harshAccel/driverStats.totalPoints>0.2) eco.tip+=" — Smooth throttle for fuel saving";
+    if(driverStats.overspeed/driverStats.totalPoints>0.3) eco.tip+=" — Slow down! Overspeed habit detected";
+    if(driverStats.harshAccel/driverStats.totalPoints>0.2) eco.tip+=" — Smooth throttle for fuel saving";
 }
 
 /* ===== Elevation API ===== */
 async function getElevations(coords){
-try{
-const locs=coords.map(p=>`${p.lat},${p.lng}`).join('|');
-const r=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${encodeURIComponent(locs)}`);
-const d=await r.json();
-return d.results.map(x=>x.elevation);
-}catch{return new Array(coords.length).fill(0);}
+    try{
+        const locs=coords.map(p=>`${p.lat},${p.lng}`).join('|');
+        const r=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${encodeURIComponent(locs)}`);
+        const d=await r.json();
+        return d.results.map(x=>x.elevation);
+    }catch{return new Array(coords.length).fill(0);}
 }
 
 
 /* ===== Multi-Step Route Awareness ===== */
 async function getUpcomingSteps(latlng, maxSteps=5){
-if(!routes.length) return [];
-const upcomingSteps=[];
-routes.forEach(r=>{
-let nearestIdx=-1, minDist=Infinity;
-r.steps.forEach((s,i)=>{
-const d=latlng.distanceTo([s.lat,s.lng]);
-if(d<minDist){ minDist=d; nearestIdx=i; }
-});
-if(nearestIdx!==-1){
-for(let j=nearestIdx; j<Math.min(r.steps.length, nearestIdx+maxSteps); j++){
-upcomingSteps.push(r.steps[j]);
-}
-}
-});
-return upcomingSteps;
+  if(!routes.length) return [];
+  const upcomingSteps=[];
+  routes.forEach(r=>{
+    let nearestIdx=-1, minDist=Infinity;
+    r.steps.forEach((s,i)=>{
+      const d=latlng.distanceTo([s.lat,s.lng]);
+      if(d<minDist){ minDist=d; nearestIdx=i; }
+    });
+    if(nearestIdx!==-1){
+      for(let j=nearestIdx; j<Math.min(r.steps.length, nearestIdx+maxSteps); j++){
+        upcomingSteps.push(r.steps[j]);
+      }
+    }
+  });
+  return upcomingSteps;
 }
 
 async function adaptiveAIDashboard(latlng,heading){
-const currentSpeed = calculateGPSSpeed(latlng);
-const slopeData=await predictElevation(latlng,heading);
-const slope=slopeData.slope;
+    const currentSpeed = calculateGPSSpeed(latlng);
+    const slopeData=await predictElevation(latlng,heading);
+    const slope=slopeData.slope;
 
-let eco={speed:50,gear:3,throttle:45,tip:"Drive smoothly"};
+    let eco={speed:50,gear:3,throttle:45,tip:"Drive smoothly"};
 
-if(routes.length){
-// Predict 3–5 steps ahead based on route steps
-const upcomingSteps=[];
-routes.forEach(r=>{
-r.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<500) upcomingSteps.push(s); });
-});
-upcomingSteps.slice(0,5).forEach(step=>{
-const stepSlope=step.elev-recentElevations[0]||slope;
-const stepEco=ecoAdvisor(step.distance,stepSlope,step.text);
-eco=stepEco; // adopt last relevant step for dashboard
-if(step.element) step.element.title=`Tip: ${stepEco.tip}, Speed: ${stepEco.speed}, Gear: ${stepEco.gear}, Throttle: ${stepEco.throttle}%`;
-});
-}
+    if(routes.length){
+        // Predict 3–5 steps ahead based on route steps
+        const upcomingSteps=[];
+        routes.forEach(r=>{
+            r.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<500) upcomingSteps.push(s); });
+        });
+        upcomingSteps.slice(0,5).forEach(step=>{
+            const stepSlope=step.elev-recentElevations[0]||slope;
+            const stepEco=ecoAdvisor(step.distance,stepSlope,step.text);
+            eco=stepEco; // adopt last relevant step for dashboard
+            if(step.element) step.element.title=`Tip: ${stepEco.tip}, Speed: ${stepEco.speed}, Gear: ${stepEco.gear}, Throttle: ${stepEco.throttle}%`;
+        });
+    }
 
-updateDriverBehavior(currentSpeed,eco);
+    updateDriverBehavior(currentSpeed,eco);
 
-document.getElementById("speed").textContent = eco.speed+" km/h";
-document.getElementById("gear").textContent = eco.gear;
-document.getElementById("throttle").textContent = eco.throttle+"%";
-document.getElementById("ai-tip").textContent = eco.tip;
-totalFuel += (eco.throttle/1000);
-document.getElementById("fuel-used").textContent = totalFuel.toFixed(2)+" L";
+    document.getElementById("speed").textContent = eco.speed+" km/h";
+    document.getElementById("gear").textContent = eco.gear;
+    document.getElementById("throttle").textContent = eco.throttle+"%";
+    document.getElementById("ai-tip").textContent = eco.tip;
+    totalFuel += (eco.throttle/1000);
+    document.getElementById("fuel-used").textContent = totalFuel.toFixed(2)+" L";
 }
 
 /* ===== GPS speed and idle detection ===== */
 let lastLatLng=null, lastGPSPos=null, lastGPSTime=null, idleStart=null;
 const IDLE_THRESHOLD=3, IDLE_TIME=60;
 function checkIdle(latlng){
-if(!lastLatLng){ lastLatLng=latlng; idleStart=Date.now(); return false; }
-const dist=latlng.distanceTo(lastLatLng);
-if(dist<IDLE_THRESHOLD){ if(!idleStart) idleStart=Date.now(); return (Date.now()-idleStart)/1000 >= IDLE_TIME; }
-lastLatLng=latlng; idleStart=null; return false;
+    if(!lastLatLng){ lastLatLng=latlng; idleStart=Date.now(); return false; }
+    const dist=latlng.distanceTo(lastLatLng);
+    if(dist<IDLE_THRESHOLD){ if(!idleStart) idleStart=Date.now(); return (Date.now()-idleStart)/1000 >= IDLE_TIME; }
+    lastLatLng=latlng; idleStart=null; return false;
 }
 function calculateGPSSpeed(latlng){
-const now=Date.now();
-if(lastGPSPos && lastGPSTime){
-const dist=latlng.distanceTo(lastGPSPos);
-const dt=(now-lastGPSTime)/1000;
-lastGPSPos=latlng; lastGPSTime=now;
-return (dist/dt)*3.6;
-}else{ lastGPSPos=latlng; lastGPSTime=now; return 0; }
+    const now=Date.now();
+    if(lastGPSPos && lastGPSTime){
+        const dist=latlng.distanceTo(lastGPSPos);
+        const dt=(now-lastGPSTime)/1000;
+        lastGPSPos=latlng; lastGPSTime=now;
+        return (dist/dt)*3.6;
+    }else{ lastGPSPos=latlng; lastGPSTime=now; return 0; }
 }
 
 /* ===== Predict multi-step elevation ahead ===== */
 const ELEVATION_LOOKAHEAD=5, ELEVATION_STEP=10;
 let recentElevations=[];
 async function predictElevation(latlng,heading){
-const R=6378137, pointsAhead=[];
-for(let i=1;i<=ELEVATION_LOOKAHEAD;i++){
-const d=ELEVATION_STEP*i;
-const latRad=latlng.lat*Math.PI/180;
-const lonRad=latlng.lng*Math.PI/180;
-const newLat=latRad+(d*Math.cos(heading*Math.PI/180))/R;
-const newLng=lonRad+(d*Math.sin(heading*Math.PI/180))/(R*Math.cos(latRad));
-pointsAhead.push({lat:newLat*180/Math.PI,lng:newLng*180/Math.PI});
-}
-const elevs=await getElevations(pointsAhead);
-recentElevations=elevs;
-const smoothSlope = elevs.reduce((a,b,i,arr)=>i===0?a: a + (b-arr[i-1]),0)/(elevs.length-1);
-const throttleCurve=elevs.map((e,i)=>{ const delta=i===0?0:e-elevs[i-1]; return delta>3?60: delta<-3?25:45; });
-return {elevs, slope:smoothSlope, throttleCurve};
+    const R=6378137, pointsAhead=[];
+    for(let i=1;i<=ELEVATION_LOOKAHEAD;i++){
+        const d=ELEVATION_STEP*i;
+        const latRad=latlng.lat*Math.PI/180;
+        const lonRad=latlng.lng*Math.PI/180;
+        const newLat=latRad+(d*Math.cos(heading*Math.PI/180))/R;
+        const newLng=lonRad+(d*Math.sin(heading*Math.PI/180))/(R*Math.cos(latRad));
+        pointsAhead.push({lat:newLat*180/Math.PI,lng:newLng*180/Math.PI});
+    }
+    const elevs=await getElevations(pointsAhead);
+    recentElevations=elevs;
+    const smoothSlope = elevs.reduce((a,b,i,arr)=>i===0?a: a + (b-arr[i-1]),0)/(elevs.length-1);
+    const throttleCurve=elevs.map((e,i)=>{ const delta=i===0?0:e-elevs[i-1]; return delta>3?60: delta<-3?25:45; });
+    return {elevs, slope:smoothSlope, throttleCurve};
 }
 /* ===== GPS Watch ===== */
 if(navigator.geolocation){
-navigator.geolocation.watchPosition(async pos=>{
-const latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
-const heading=pos.coords.heading||0;
-if(!waypoints.length) waypoints.push(latlng); else waypoints[0]=latlng;
-if(!userMarker){ userMarker=L.marker(latlng,{icon:carIcon}).addTo(map); map.setView(latlng,14); }
-else userMarker.setLatLng(latlng);
-await adaptiveAIDashboard(latlng,heading);
-checkOffRoute(latlng);
-},()=>console.warn("GPS unavailable"),{enableHighAccuracy:true});
+    navigator.geolocation.watchPosition(async pos=>{
+        const latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
+        const heading=pos.coords.heading||0;
+        if(!waypoints.length) waypoints.push(latlng); else waypoints[0]=latlng;
+        if(!userMarker){ userMarker=L.marker(latlng,{icon:carIcon}).addTo(map); map.setView(latlng,14); }
+        else userMarker.setLatLng(latlng);
+        await adaptiveAIDashboard(latlng,heading);
+        checkOffRoute(latlng);
+    },()=>console.warn("GPS unavailable"),{enableHighAccuracy:true});
 }
 
 /* ===== Off-route adaptation ===== */
@@ -302,28 +302,7 @@ async function checkOffRoute(latlng){
                 createRoute(latlng,lastWaypoint,colors[routes.length%colors.length]);
             }
         }
-let lastRecalcTime = 0;
-async function checkOffRoute(latlng) {
-  if (!routes.length) return;
-
-  const nearestRoute = routes[0];
-  let minDist = Infinity;
-  nearestRoute.steps.forEach(s => {
-    const d = latlng.distanceTo([s.lat, s.lng]);
-    if (d < minDist) minDist = d;
-  });
-
-  // Recalculate route only if far off and at least 10 seconds have passed
-  if (minDist > 50 && Date.now() - lastRecalcTime > 10000) {
-    console.log("Off-route detected — recalculating");
-    lastRecalcTime = Date.now();
-
-    const dest = waypoints[waypoints.length - 1];
-    if (dest) {
-      clearAllRoutes(); // remove old ones before creating new
-      createRoute(latlng, dest, colors[routes.length % colors.length]);
-}
-  }
+    }
 }
 
 /* ===== Route creation & step-box integration ===== */
@@ -369,111 +348,14 @@ async function createRoute(start,end,color,marker=null,index=null){
             steps.push({lat:coords[idxStart].lat,lng:coords[idxStart].lng,text:s.text,elev,element:item});
         });
         routes.push({rc,group,steps,color:routeColor});
-async function createRoute(start, end, color, marker = null, index = null) {
-  // Remove duplicate routes going to the same endpoint
-  const existing = routes.find(r =>
-    r.end &&
-    Math.abs(r.end.lat - end.lat) < 0.0001 &&
-    Math.abs(r.end.lng - end.lng) < 0.0001
-  );
-  if (existing) {
-    console.log("Duplicate route detected — skipping creation");
-    return;
-  }
-
-  const routeIndex = index !== null ? index : routes.length + 1;
-  const routeColor = color || colors[(routeIndex - 1) % colors.length];
-
-  const rc = L.Routing.control({
-    waypoints: [start, end],
-    router: L.Routing.osrmv1({ serviceUrl: "https://router.project-osrm.org/route/v1" }),
-    show: false,
-    addWaypoints: false,
-    createMarker: () => null,
-    lineOptions: { styles: [{ color: routeColor, weight: 5, opacity: 0.9 }] }
-  }).addTo(map);
-
-  const group = L.layerGroup().addTo(map);
-
-  const box = document.createElement("div");
-  box.className = "route-box";
-  const header = document.createElement("div");
-  header.className = "route-header";
-  header.style.background = routeColor;
-  header.innerHTML = `<b>Route ${routeIndex}</b>
-      <button class="remove-btn" style="background:#ff4c4c;border:none;color:#fff;border-radius:50%;width:22px;height:22px;">✕</button>`;
-  const content = document.createElement("div");
-  content.className = "route-content";
-  content.style.display = "block";
-
-  box.appendChild(header);
-  box.appendChild(content);
-  document.getElementById("routePanel").appendChild(box);
-
-  header.onclick = e => {
-    if (!e.target.classList.contains("remove-btn"))
-      content.style.display = content.style.display === "block" ? "none" : "block";
-  };
-
-  header.querySelector(".remove-btn").onclick = e => {
-    e.stopPropagation();
-    removeRoute(rc);
-  };
-
-  rc.on("routesfound", async e => {
-    const route = e.routes[0];
-    const coords = route.coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
-    const elevs = await getElevations(coords);
-    const steps = [];
-
-    content.innerHTML = "";
-    route.instructions.forEach((s, j) => {
-      const idxStart = s.index;
-      const idxEnd =
-        j + 1 < route.instructions.length
-          ? route.instructions[j + 1].index
-          : coords.length;
-      const segmentCoords = coords.slice(idxStart, idxEnd).map(c => [c.lat, c.lng]);
-      const elev = elevs[idxStart] || 0;
-      const stepLine = L.polyline(segmentCoords, {
-        color: routeColor,
-        weight: 5,
-        opacity: 0.5
-      }).addTo(group);
-      const eco = ecoAdvisor(s.distance, elev, s.text);
-      const item = document.createElement("div");
-      item.className = "step-item";
-      item.innerHTML = `<b>${s.text}</b>
-        <div>${(s.distance / 1000).toFixed(2)} km | Elev ${elev.toFixed(
-        1
-      )} m | Speed ${eco.speed}</div>`;
-      content.appendChild(item);
-
-      item.addEventListener("mouseenter", () => {
-        stepLine.setStyle({ color: "#00FF00", weight: 6, opacity: 0.9 });
-      });
-      item.addEventListener("mouseleave", () => {
-        stepLine.setStyle({ color: routeColor, weight: 5, opacity: 0.5 });
-      });
-      steps.push({
-        lat: coords[idxStart].lat,
-        lng: coords[idxStart].lng,
-        text: s.text,
-        elev,
-        element: item
-      });
-});
-
-    routes.push({ rc, group, steps, color: routeColor, end, box });
-  });
+    });
 }
-
 
 /* ===== Add waypoint on map click ===== */
 map.on('click',e=>{
-const latlng=e.latlng; waypoints.push(latlng);
-const marker=L.marker(latlng).addTo(map); waypointMarkers.push(marker);
-if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length],marker);
+    const latlng=e.latlng; waypoints.push(latlng);
+    const marker=L.marker(latlng).addTo(map); waypointMarkers.push(marker);
+    if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length],marker);
 });
 
 /* ===== Rebuild Routes ===== */
@@ -482,55 +364,22 @@ function rebuildRoutes(){
     routes=[]; document.getElementById('routePanel').innerHTML='';
     if(waypoints.length<2) return;
     for(let i=1;i<waypoints.length;i++){ createRoute(waypoints[i-1],waypoints[i],colors[(i-1)%colors.length],waypointMarkers[i-1],i); }
-/* ===== Route Removal Helpers ===== */
-function removeRoute(rc) {
-  const routeIndex = routes.findIndex(r => r.rc === rc);
-  if (routeIndex !== -1) {
-    const r = routes[routeIndex];
-    map.removeControl(r.rc);
-    map.removeLayer(r.group);
-    if (r.box && r.box.parentNode) r.box.parentNode.removeChild(r.box);
-    routes.splice(routeIndex, 1);
-  }
 }
 
-function clearAllRoutes() {
-  routes.forEach(r => {
-    map.removeControl(r.rc);
-    map.removeLayer(r.group);
-    if (r.box && r.box.parentNode) r.box.parentNode.removeChild(r.box);
-  });
-  routes = [];
-  document.getElementById("routePanel").innerHTML = "";
-}
-/* ===== Rebuild Routes ===== */
-function rebuildRoutes() {
-  clearAllRoutes();
-  if (waypoints.length < 2) return;
-  for (let i = 1; i < waypoints.length; i++) {
-    createRoute(
-      waypoints[i - 1],
-      waypoints[i],
-      colors[(i - 1) % colors.length],
-      waypointMarkers[i - 1],
-      i
-    );
-  }
-}
 
 /* ===== Map Toggle ===== */
 let mapFull=false;
 document.getElementById("map-toggle").addEventListener("click",()=>{
-const mapContainer=document.querySelector(".map-container");
-const camera=document.querySelector(".camera");
-const button=document.getElementById("map-toggle");
-if(!mapFull){
-mapContainer.style.position="fixed"; mapContainer.style.top="0"; mapContainer.style.left="0"; mapContainer.style.width="100vw"; mapContainer.style.height="100vh"; mapContainer.style.zIndex="2000";
-camera.style.display="none"; button.innerText="Restore Map"; mapFull=true; setTimeout(()=>map.invalidateSize(),300);
-}else{
-mapContainer.style.position=""; mapContainer.style.width=""; mapContainer.style.height=""; mapContainer.style.zIndex="";
-camera.style.display="block"; button.innerText="Full Map"; mapFull=false; setTimeout(()=>map.invalidateSize(),300);
-}
+  const mapContainer=document.querySelector(".map-container");
+  const camera=document.querySelector(".camera");
+  const button=document.getElementById("map-toggle");
+  if(!mapFull){
+    mapContainer.style.position="fixed"; mapContainer.style.top="0"; mapContainer.style.left="0"; mapContainer.style.width="100vw"; mapContainer.style.height="100vh"; mapContainer.style.zIndex="2000";
+    camera.style.display="none"; button.innerText="Restore Map"; mapFull=true; setTimeout(()=>map.invalidateSize(),300);
+  }else{
+    mapContainer.style.position=""; mapContainer.style.width=""; mapContainer.style.height=""; mapContainer.style.zIndex="";
+    camera.style.display="block"; button.innerText="Full Map"; mapFull=false; setTimeout(()=>map.invalidateSize(),300);
+  }
 });
 
 /* ===== Camera Toggle ===== */
@@ -542,10 +391,10 @@ document.getElementById("disable-camera").onclick=()=>{ camImg.style.filter="blu
 const input=document.getElementById('searchInput'),suggestBox=document.getElementById('suggestBox');
 let results=[];
 input.oninput=async()=>{
-const q=input.value.trim(); if(!q) return suggestBox.style.display='none';
-const d=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`).then(r=>r.json()).catch(()=>({features:[]})); results=d.features||[];
-suggestBox.innerHTML=''; results.forEach((f,i)=>{ const p=f.properties||{},name=p.name||p.city||'Unknown'; const div=document.createElement('div'); div.className='suggest-item'; div.innerHTML=`<b>${name}</b><div style="font-size:12px;color:#bbb;">${[p.city,p.state,p.country].filter(Boolean).join(', ')}</div>`; div.onclick=()=>select(i); suggestBox.appendChild(div); });
-suggestBox.style.display=results.length?'block':'none';
+  const q=input.value.trim(); if(!q) return suggestBox.style.display='none';
+  const d=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`).then(r=>r.json()).catch(()=>({features:[]})); results=d.features||[];
+  suggestBox.innerHTML=''; results.forEach((f,i)=>{ const p=f.properties||{},name=p.name||p.city||'Unknown'; const div=document.createElement('div'); div.className='suggest-item'; div.innerHTML=`<b>${name}</b><div style="font-size:12px;color:#bbb;">${[p.city,p.state,p.country].filter(Boolean).join(', ')}</div>`; div.onclick=()=>select(i); suggestBox.appendChild(div); });
+  suggestBox.style.display=results.length?'block':'none';
 };
 document.addEventListener('click',e=>{if(!suggestBox.contains(e.target)&&e.target!==input) suggestBox.style.display='none';});
 document.getElementById('addBtn').onclick=()=>{if(results.length) select(0);};
