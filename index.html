@@ -8,125 +8,192 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
 html, body {
-  margin: 0; padding: 0; font-family: 'Segoe 5UI', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
   background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
-  color: white; height: 100%; width: 100%; overflow: hidden;
+  color: white;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
-.tabs { display: flex; gap: 0.5vw; background: #1c2b44; padding: 0.5vh 1vw; }
-.tab { padding: 0.8vh 1.8vw; cursor: pointer; border-radius: 0.8vh; background: #283550; font-weight: bold; font-size: clamp(0.8rem,1.2vw,1.2rem); transition: 0.3s; }
-.tab.active { background: #007bff; color: white; }
-.tab-content { display: none; flex: 1; box-sizing: border-box; height: calc(100% - 6vh); padding: 0; }
-.tab-content.active { display: flex; gap: 1vw; }
 
-.left { flex: 0 0 28%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.card { background: rgba(28,34,48,0.95); border-radius: 1.5vh; border: 0.2vh solid #ffffff50;
-  display: flex; flex-direction: column; justify-content: space-between; padding: 1vh 1vw; box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
-  transition: transform 0.2s ease, box-shadow 0.3s ease; flex: 1; min-height:0; }
+/* === GRID LAYOUT === */
+.parent {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 8px;
+  height: 100vh;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.div1 { grid-column: span 4 / span 4; }
+.div2 { grid-column: span 2 / span 2; grid-row-start: 2; }
+.div3 { grid-column: span 2 / span 2; grid-column-start: 3; grid-row-start: 2; }
+.div4 { grid-column: span 2 / span 2; grid-row-start: 3; }
+.div5 { grid-column: span 2 / span 2; grid-column-start: 3; grid-row-start: 3; }
+.div6 { grid-column: span 3 / span 3; grid-row-start: 4; }
+.div7 { grid-column-start: 4; grid-row-start: 4; }
+.div8 { grid-column: span 4 / span 4; grid-row: span 2 / span 2; grid-row-start: 5; }
+.div9 { grid-column: span 4 / span 4; grid-row: span 2 / span 2; grid-row-start: 7; }
+
+/* === CARD & COMPONENT STYLES === */
+.card {
+  background: rgba(28,34,48,0.95);
+  border-radius: 1.5vh;
+  border: 0.2vh solid #ffffff50;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1vh 1vw;
+  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  text-align: center;
+}
 .card:hover { transform: translateY(-0.3vh); box-shadow: 0 0.8vh 2vh rgba(0,0,0,0.5); }
+
 .ai-box { background:#ffa500; color:#000; }
 .speed-box { background:#4e79a7; }
 .gear-box { background:#76b7b2; color:#000; }
 .fuel-used-box { background:#c2c2c2; color:#000; }
 .throttle-box { background:#2ca02c; color:#000; }
-.stat-label { font-size: clamp(0.8rem, 1.5vw, 1.5rem); color: #fff; margin-bottom: 0.5vh; text-align: center; text-transform: uppercase; letter-spacing: 0.1vw; }
-.stat-value { font-size: clamp(1rem,2vw,2.5rem); text-align: center; padding: 0.5vh 0.5vw; background: rgba(255,255,255,0.15); border-radius: 1vh; min-width: 5vw; font-weight: bold; margin-top: auto; }
 
-.right { flex: 0 0 72%; display: flex; flex-direction: column; gap: 1vh; height: 100%; }
-.map-container, .camera { flex: 1; border-radius: 1.2vh; overflow: hidden; position: relative; border: 0.2vh solid rgba(255,255,255,0.3); box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3); }
-.map { width: 100%; height: 100%; border: 0; }
+.stat-label {
+  font-size: clamp(0.8rem, 1.5vw, 1.5rem);
+  margin-bottom: 0.5vh;
+  text-transform: uppercase;
+  letter-spacing: 0.1vw;
+}
+.stat-value {
+  font-size: clamp(1rem,2vw,2.5rem);
+  background: rgba(255,255,255,0.15);
+  border-radius: 1vh;
+  font-weight: bold;
+  padding: 0.5vh 0.5vw;
+  margin-top: auto;
+}
+
+/* === MAP & CAMERA === */
+.map-container, .camera {
+  width: 100%;
+  height: 100%;
+  border-radius: 1.2vh;
+  overflow: hidden;
+  position: relative;
+  border: 0.2vh solid rgba(255,255,255,0.3);
+  box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3);
+}
+.map { width: 100%; height: 100%; }
 
 .map-button {
-  position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
-  padding: 1vh 2vw; background: linear-gradient(135deg, #00d4ff, #007bff);
-  color:#fff; font-weight:bold; border:none; border-radius:2vh; cursor:pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5); font-size: clamp(0.8rem,1vw,1rem);
+  position: absolute;
+  bottom: 1vh; left: 50%;
+  transform: translateX(-50%);
+  padding: 1vh 2vw;
+  background: linear-gradient(135deg, #00d4ff, #007bff);
+  color:#fff;
+  border:none;
+  border-radius:2vh;
+  cursor:pointer;
+  font-weight:bold;
+  font-size: clamp(0.8rem,1vw,1rem);
 }
-.map-button:hover { transform: translateX(-50%) scale(1.05); background: linear-gradient(135deg,#0099ff,#005ce6); }
+.map-button:hover { transform: translateX(-50%) scale(1.05); }
 
-.camera img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s ease; filter: blur(12px) brightness(0.7); }
-.camera .center-button, .camera .disable-button {
-  position: absolute; z-index: 2; padding: 1vh 2vw;
-  font-size: clamp(0.8rem,1vw,1rem); background: linear-gradient(135deg, #28a745, #1c7c31);
-  color: #fff; font-weight: bold; border: none; border-radius: 1vh; cursor: pointer;
+.camera img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.5s ease;
+  filter: blur(12px) brightness(0.7);
+}
+.camera button {
+  position: absolute;
+  z-index: 2;
+  padding: 1vh 2vw;
+  font-size: clamp(0.8rem,1vw,1rem);
+  color: #fff;
+  border: none;
+  border-radius: 1vh;
+  cursor: pointer;
   box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
 }
-.camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); }
-.camera .disable-button { top: 1vh; left: 1vw; }
+.camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); background: linear-gradient(135deg, #28a745, #1c7c31); }
+.camera .disable-button { top: 1vh; left: 1vw; background: linear-gradient(135deg, #dc3545, #a71d2a); }
 
-#uiContainer{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:1000;}
-#searchInput{width:300px;padding:10px 14px;border-radius:20px;border:none;background:#15161a;color:#eee;}
-#addBtn{background:#4DA6FF;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;}
-#suggestBox{position:absolute;top:55px;left:50%;transform:translateX(-50%);width:340px;background:#1c1c24;border-radius:10px;overflow:auto;z-index:1001;display:none;}
-.suggest-item{padding:10px;border-bottom:1px solid #222;cursor:pointer;}
-
-/* ---- Route panel inside map container ---- */
-.route-panel{
-  position:absolute; top:10px; right:10px; width:280px; max-height:90%; overflow:auto; 
-  z-index:1000; background:#181920; border-radius:10px; padding:5px;
-  transition: all 0.3s; display:flex; flex-direction:column;
+/* === ROUTE PANEL === */
+.route-panel {
+  position:absolute;
+  top:10px; right:10px;
+  width:280px;
+  max-height:90%;
+  overflow:auto;
+  background:#181920;
+  border-radius:10px;
+  padding:5px;
+  z-index:1000;
 }
-.route-box{background:#252530;border-radius:8px;margin-bottom:8px;border:1px solid #2a2a36;overflow:hidden;}
-.route-header{background:#2e323a;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
-.route-content{display:none;padding:6px;background:#1f2228;max-height:200px;overflow-y:auto;}
-.step-item{background:#1f2228;border-radius:6px;padding:6px;margin-bottom:4px;font-size:12px;}
-@media (max-width: 1200px) {
-  .tab-content.active { flex-direction: column; }
-  .left, .right { flex: 1 1 100%; height: auto; }
-  .map-container, .camera { flex: 0 0 45%; }
+.route-box {
+  background:#252530;
+  border-radius:8px;
+  margin-bottom:8px;
+  overflow:hidden;
+  border:1px solid #2a2a36;
 }
+.route-header { background:#2e323a; padding:6px 8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.route-content { display:none; padding:6px; background:#1f2228; max-height:200px; overflow-y:auto; }
+.step-item { background:#1f2228; border-radius:6px; padding:6px; margin-bottom:4px; font-size:12px; }
 </style>
 </head>
-<body>
-<div class="tabs">
-  <div class="tab active" data-tab="dashboard">Dashboard</div>
-</div>
-<div class="tab-content active" id="dashboard">
-  <div class="left">
-    <div class="card ai-box">
-      <div class="stat-label">AI Recommendation</div>
-      <div class="stat-value" id="ai-tip">Drive smoothly</div>
-    </div>
-    <div class="card speed-box">
-      <div class="stat-label">Recommended Speed</div>
-      <div class="stat-value" id="speed">0 km/h</div>
-    </div>
-    <div class="card gear-box">
-      <div class="stat-label">Recommended Gear</div>
-      <div class="stat-value" id="gear">0</div>
-    </div>
-    <div class="card fuel-used-box">
-      <div class="stat-label">Fuel Used</div>
-      <div class="stat-value" id="fuel-used">0.00 L</div>
-    </div>
-    <div class="card throttle-box">
-      <div class="stat-label">Throttle</div>
-      <div class="stat-value" id="throttle">0%</div>
-    </div>
-  </div>
-  <div class="right">
-    <div class="map-container">
-      <div id="map" class="map"></div>
-      <button class="map-button" id="map-toggle">Full Map</button>
-      <div id="routePanel" class="route-panel"></div>
-    </div>
-    <div class="camera">
-      <img src="/video_feed" alt="Camera Feed" id="camera-feed">
-      <button class="center-button" id="enable-camera">Enable Camera</button>
-      <button class="disable-button" id="disable-camera">Disable</button>
-    </div>
-  </div>
-</div>
 
-<div id="uiContainer">
-  <input id="searchInput" placeholder="Search place or address"/>
-  <button id="addBtn">Add</button>
+<body>
+<div class="parent">
+  <div class="div1 card ai-box">
+    <div class="stat-label">AI Recommendation</div>
+    <div class="stat-value" id="ai-tip">Drive smoothly</div>
+  </div>
+
+  <div class="div2 card speed-box">
+    <div class="stat-label">Speed</div>
+    <div class="stat-value" id="speed">0 km/h</div>
+  </div>
+
+  <div class="div3 card gear-box">
+    <div class="stat-label">Gear</div>
+    <div class="stat-value" id="gear">0</div>
+  </div>
+
+  <div class="div4 card fuel-used-box">
+    <div class="stat-label">Fuel Used</div>
+    <div class="stat-value" id="fuel-used">0.00 L</div>
+  </div>
+
+  <div class="div5 card throttle-box">
+    <div class="stat-label">Throttle</div>
+    <div class="stat-value" id="throttle">0%</div>
+  </div>
+
+  <div class="div6 map-container div8">
+    <div id="map" class="map"></div>
+    <button class="map-button" id="map-toggle">Full Map</button>
+    <div id="routePanel" class="route-panel"></div>
+  </div>
+
+  <div class="div9 camera">
+    <img src="/video_feed" alt="Camera Feed" id="camera-feed">
+    <button class="center-button" id="enable-camera">Enable Camera</button>
+    <button class="disable-button" id="disable-camera">Disable</button>
+  </div>
 </div>
-<div id="suggestBox"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-<script>
 
+<!-- Keep your full JS logic here (unchanged) -->
+<script>
+  
 /* ===== Map & Icons ===== */
 const map = L.map('map').setView([19.076,72.8777],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
