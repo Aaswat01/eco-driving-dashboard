@@ -1,197 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Driver Dashboard — AI Eco Driving</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Eco Driving Dashboard</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
   background: radial-gradient(circle at top left, #0f1c2e, #1c2b44, #2a3b60);
-  color: white;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* === GRID LAYOUT === */
-.parent {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(8, 1fr);
-  gap: 8px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #fff;
   height: 100vh;
-  padding: 10px;
-  box-sizing: border-box;
-}
-
-.div1 { grid-column: span 4 / span 4; }
-.div2 { grid-column: span 2 / span 2; grid-row-start: 2; }
-.div3 { grid-column: span 2 / span 2; grid-column-start: 3; grid-row-start: 2; }
-.div4 { grid-column: span 2 / span 2; grid-row-start: 3; }
-.div5 { grid-column: span 2 / span 2; grid-column-start: 3; grid-row-start: 3; }
-.div6 { grid-column: span 3 / span 3; grid-row-start: 4; }
-.div7 { grid-column-start: 4; grid-row-start: 4; }
-.div8 { grid-column: span 4 / span 4; grid-row: span 2 / span 2; grid-row-start: 5; }
-.div9 { grid-column: span 4 / span 4; grid-row: span 2 / span 2; grid-row-start: 7; }
-
-/* === CARD & COMPONENT STYLES === */
-.card {
-  background: rgba(28,34,48,0.95);
-  border-radius: 1.5vh;
-  border: 0.2vh solid #ffffff50;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 1vh 1vw;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.3);
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
-  text-align: center;
+  overflow: hidden;
 }
-.card:hover { transform: translateY(-0.3vh); box-shadow: 0 0.8vh 2vh rgba(0,0,0,0.5); }
 
-.ai-box { background:#ffa500; color:#000; }
+/* === HEADER: AI Recommendation === */
+.ai-tip-box {
+  flex: 0 0 auto;
+  background: #ffa500;
+  color: #000;
+  border-radius: 1vh;
+  margin: 1vh 2vw;
+  padding: 1.5vh 1vw;
+  text-align: center;
+  font-weight: bold;
+  font-size: clamp(1rem, 2vw, 1.6rem);
+  box-shadow: 0 0.5vh 1vh rgba(0,0,0,0.4);
+}
+
+/* === DASHBOARD STATS === */
+.stats-row {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 1vh;
+  margin: 0 1vw;
+}
+.stat-card {
+  flex: 1;
+  min-width: 120px;
+  max-width: 180px;
+  background: rgba(28,34,48,0.95);
+  border-radius: 1vh;
+  padding: 1vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0.3vh 1vh rgba(0,0,0,0.4);
+}
+.stat-label { font-size: 0.9rem; opacity: 0.8; }
+.stat-value { font-size: 1.3rem; font-weight: bold; margin-top: 0.3rem; }
+
 .speed-box { background:#4e79a7; }
 .gear-box { background:#76b7b2; color:#000; }
-.fuel-used-box { background:#c2c2c2; color:#000; }
+.fuel-box { background:#c2c2c2; color:#000; }
 .throttle-box { background:#2ca02c; color:#000; }
 
-.stat-label {
-  font-size: clamp(0.8rem, 1.5vw, 1.5rem);
-  margin-bottom: 0.5vh;
-  text-transform: uppercase;
-  letter-spacing: 0.1vw;
+/* === SEARCH BAR SECTION === */
+.search-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1vw;
+  margin: 1vh 2vw;
 }
-.stat-value {
-  font-size: clamp(1rem,2vw,2.5rem);
-  background: rgba(255,255,255,0.15);
+#searchInput {
+  flex: 1;
+  max-width: 70%;
+  padding: 0.8vh 1vw;
+  font-size: 1rem;
   border-radius: 1vh;
+  border: none;
+  outline: none;
+}
+#micBtn {
+  background: #ff4c4c;
+  color: #fff;
+  border: none;
+  border-radius: 1vh;
+  padding: 0.8vh 1.2vw;
   font-weight: bold;
-  padding: 0.5vh 0.5vw;
-  margin-top: auto;
+  cursor: pointer;
+  box-shadow: 0 0.4vh 1vh rgba(0,0,0,0.3);
 }
 
-/* === MAP & CAMERA === */
+/* === MAIN SECTION: MAP + CAMERA === */
+.main-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  padding: 0 2vw 1vh;
+}
 .map-container, .camera {
-  width: 100%;
-  height: 100%;
-  border-radius: 1.2vh;
-  overflow: hidden;
+  flex: 1;
   position: relative;
-  border: 0.2vh solid rgba(255,255,255,0.3);
-  box-shadow: 0 0.4vh 1.6vh rgba(0,0,0,0.3);
+  border-radius: 1vh;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0.5vh 1vh rgba(0,0,0,0.4);
 }
 .map { width: 100%; height: 100%; }
-
-.map-button {
-  position: absolute;
-  bottom: 1vh; left: 50%;
-  transform: translateX(-50%);
-  padding: 1vh 2vw;
-  background: linear-gradient(135deg, #00d4ff, #007bff);
-  color:#fff;
-  border:none;
-  border-radius:2vh;
-  cursor:pointer;
-  font-weight:bold;
-  font-size: clamp(0.8rem,1vw,1rem);
-}
-.map-button:hover { transform: translateX(-50%) scale(1.05); }
-
 .camera img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: filter 0.5s ease;
-  filter: blur(12px) brightness(0.7);
+  filter: blur(10px) brightness(0.8);
+  transition: filter 0.3s ease;
 }
 .camera button {
   position: absolute;
-  z-index: 2;
-  padding: 1vh 2vw;
-  font-size: clamp(0.8rem,1vw,1rem);
-  color: #fff;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1vh;
+  padding: 0.8vh 2vw;
   border: none;
   border-radius: 1vh;
+  color: #fff;
+  font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.6);
 }
-.camera .center-button { top: 50%; left: 50%; transform: translate(-50%,-50%); background: linear-gradient(135deg, #28a745, #1c7c31); }
-.camera .disable-button { top: 1vh; left: 1vw; background: linear-gradient(135deg, #dc3545, #a71d2a); }
+#enable-camera { background: #28a745; }
+#disable-camera { background: #dc3545; display: none; }
 
-/* === ROUTE PANEL === */
-.route-panel {
-  position:absolute;
-  top:10px; right:10px;
-  width:280px;
-  max-height:90%;
-  overflow:auto;
-  background:#181920;
-  border-radius:10px;
-  padding:5px;
-  z-index:1000;
-}
-.route-box {
-  background:#252530;
-  border-radius:8px;
-  margin-bottom:8px;
-  overflow:hidden;
-  border:1px solid #2a2a36;
-}
-.route-header { background:#2e323a; padding:6px 8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
-.route-content { display:none; padding:6px; background:#1f2228; max-height:200px; overflow-y:auto; }
-.step-item { background:#1f2228; border-radius:6px; padding:6px; margin-bottom:4px; font-size:12px; }
 </style>
 </head>
-
 <body>
-<div class="parent">
-  <div class="div1 card ai-box">
-    <div class="stat-label">AI Recommendation</div>
-    <div class="stat-value" id="ai-tip">Drive smoothly</div>
-  </div>
 
-  <div class="div2 card speed-box">
+<div class="ai-tip-box" id="ai-tip">Drive smoothly</div>
+
+<div class="stats-row">
+  <div class="stat-card speed-box">
     <div class="stat-label">Speed</div>
-    <div class="stat-value" id="speed">0 km/h</div>
+    <div class="stat-value" id="speed">50 km/h</div>
   </div>
-
-  <div class="div3 card gear-box">
+  <div class="stat-card gear-box">
     <div class="stat-label">Gear</div>
-    <div class="stat-value" id="gear">0</div>
+    <div class="stat-value" id="gear">3</div>
   </div>
-
-  <div class="div4 card fuel-used-box">
+  <div class="stat-card fuel-box">
     <div class="stat-label">Fuel Used</div>
-    <div class="stat-value" id="fuel-used">0.00 L</div>
+    <div class="stat-value" id="fuel-used">0.27 L</div>
   </div>
-
-  <div class="div5 card throttle-box">
+  <div class="stat-card throttle-box">
     <div class="stat-label">Throttle</div>
-    <div class="stat-value" id="throttle">0%</div>
+    <div class="stat-value" id="throttle">45%</div>
   </div>
+</div>
 
-  <div class="div6 map-container div8">
+<div class="search-row">
+  <input type="text" id="searchInput" placeholder="Search destination...">
+  <button id="micBtn">🎤</button>
+</div>
+
+<div class="main-section">
+  <div class="map-container">
     <div id="map" class="map"></div>
-    <button class="map-button" id="map-toggle">Full Map</button>
-    <div id="routePanel" class="route-panel"></div>
   </div>
-
-  <div class="div9 camera">
-    <img src="/video_feed" alt="Camera Feed" id="camera-feed">
-    <button class="center-button" id="enable-camera">Enable Camera</button>
-    <button class="disable-button" id="disable-camera">Disable</button>
+  <div class="camera">
+    <img src="/video_feed" id="camera-feed" alt="Camera">
+    <button id="enable-camera">Enable Camera</button>
+    <button id="disable-camera">Disable</button>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-
-<!-- Keep your full JS logic here (unchanged) -->
 <script>
   
 /* ===== Map & Icons ===== */
@@ -449,11 +430,24 @@ document.getElementById("map-toggle").addEventListener("click",()=>{
   }
 });
 
-/* ===== Camera Toggle ===== */
+/* Camera toggle */
 const camImg=document.getElementById("camera-feed");
-document.getElementById("enable-camera").onclick=()=>{ camImg.style.filter="none"; document.getElementById("enable-camera").style.display="none"; document.getElementById("disable-camera").style.display="block"; }
-document.getElementById("disable-camera").onclick=()=>{ camImg.style.filter="blur(12px) brightness(0.7)"; document.getElementById("enable-camera").style.display="block"; document.getElementById("disable-camera").style.display="none"; }
+document.getElementById("enable-camera").onclick=()=>{
+  camImg.style.filter="none";
+  document.getElementById("enable-camera").style.display="none";
+  document.getElementById("disable-camera").style.display="block";
+};
+document.getElementById("disable-camera").onclick=()=>{
+  camImg.style.filter="blur(10px) brightness(0.8)";
+  document.getElementById("enable-camera").style.display="block";
+  document.getElementById("disable-camera").style.display="none";
+};
 
+/* Voice search (optional stub) */
+document.getElementById("micBtn").onclick=()=>{
+  alert("🎤 Voice input feature coming soon!");
+};
+  
 /* ===== Search UI ===== */
 const input=document.getElementById('searchInput'),suggestBox=document.getElementById('suggestBox');
 let results=[];
@@ -470,3 +464,4 @@ function select(i){ const f=results[i]; if(!f) return; const [lng,lat]=f.geometr
 </script>
 </body>
 </html>
+
