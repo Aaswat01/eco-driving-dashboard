@@ -34,7 +34,10 @@ box-shadow:0 0.3vh 1vh rgba(0,0,0,0.4);}
 border:none;outline:none;}
 #micBtn{background:#ff4c4c;color:#fff;border:none;border-radius:1vh;padding:0.8vh 1.2vw;
 font-weight:bold;cursor:pointer;box-shadow:0 0.4vh 1vh rgba(0,0,0,0.3);}
-/* === MAIN === */
+#suggestBox{position:absolute;top:calc(100% + 2px);left:2vw;width:70%;max-height:200px;
+overflow-y:auto;background:#222;border-radius:1vh;z-index:1000;display:none;}
+.suggest-item{padding:0.5vh 1vw;cursor:pointer;}
+.suggest-item:hover{background:rgba(255,255,255,0.1);}
 .main-section{flex:1;display:flex;flex-direction:column;gap:1vh;padding:0 2vw 1vh;}
 .map-container,.camera{flex:1;position:relative;border-radius:1vh;overflow:hidden;
 border:1px solid rgba(255,255,255,0.2);box-shadow:0 0.5vh 1vh rgba(0,0,0,0.4);}
@@ -47,7 +50,6 @@ transition:filter 0.3s ease;}
 padding:0.8vh 2vw;border:none;border-radius:1vh;color:#fff;font-weight:bold;cursor:pointer;}
 #enable-camera{background:#28a745;}
 #disable-camera{background:#dc3545;display:none;}
-/* === ROUTE PANEL === */
 #routePanel{position:absolute;bottom:2vh;left:2vw;width:260px;max-height:40vh;
 overflow-y:auto;background:rgba(0,0,0,0.6);border-radius:1vh;padding:0.5vh;color:#fff;z-index:999;}
 .route-box{margin-bottom:0.8vh;border-radius:1vh;overflow:hidden;}
@@ -65,6 +67,7 @@ align-items:center;color:#fff;}
 </div>
 <div class="search-row">
   <input type="text" id="searchInput" placeholder="Search destination...">
+  <div id="suggestBox"></div>
   <button id="micBtn">🎤</button>
 </div>
 <div class="main-section">
@@ -82,22 +85,19 @@ align-items:center;color:#fff;}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-
 <script>
 
-/* ===== Map & Icons ===== */
+/* ===== MAP SETUP ===== */
 const map = L.map('map').setView([19.076,72.8777],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
 const carIcon = L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',iconSize:[42,42]});
 let userMarker=null, waypoints=[], waypointMarkers=[], routes=[], totalFuel=0;
 const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BFA5'];
 
-/* ===== Eco Advisor ===== */
+/* ===== ECO ADVISOR ===== */
 function ecoAdvisor(dist,elev,turnText){
     const t=(turnText||'').toLowerCase();
     let tip="Drive smoothly", speed=50, gear=3, throttle=45;
-
-    // Road type detection
     const roadType=t.includes("highway")?"highway":
                    t.includes("city")?"city":
                    t.includes("roundabout")?"roundabout":"normal";
@@ -108,19 +108,17 @@ function ecoAdvisor(dist,elev,turnText){
     else if(dist>800){ speed=65; gear=5; throttle=50; tip="Long straight — steady speed"; }
     else if(dist>300){ speed=55; gear=4; throttle=45; tip="Smooth cruising"; }
 
-    // Adjustments by road type
     if(roadType==="highway"){ speed=Math.min(speed,80); gear=Math.max(gear,5); throttle=50; tip+=" — highway"; }
     else if(roadType==="city"){ speed=Math.min(speed,50); gear=Math.min(gear,3); throttle=40; tip+=" — city"; }
     else if(roadType==="roundabout"){ speed=25; gear=2; throttle=35; tip+=" — roundabout"; }
 
-    // Fuel saving hints
     if(speed>70) tip="High speed — reduce for fuel saving";
     if(throttle>60 && elev>3) tip="High throttle uphill — shift earlier";
 
     return {speed, gear, throttle, tip};
 }
 
-/* ===== Driver Behavior Monitoring ===== */
+/* ===== DRIVER BEHAVIOR ===== */
 let driverStats={overspeed:0, harshAccel:0, totalPoints:0};
 function updateDriverBehavior(currentSpeed,eco){
     driverStats.totalPoints++;
@@ -135,7 +133,7 @@ function updateDriverBehavior(currentSpeed,eco){
     if(driverStats.harshAccel/driverStats.totalPoints>0.2) eco.tip+=" — Smooth throttle for fuel saving";
 }
 
-/* ===== Elevation API ===== */
+/* ===== ELEVATION ===== */
 async function getElevations(coords){
     try{
         const locs=coords.map(p=>`${p.lat},${p.lng}`).join('|');
@@ -145,26 +143,8 @@ async function getElevations(coords){
     }catch{return new Array(coords.length).fill(0);}
 }
 
-
-/* ===== Multi-Step Route Awareness ===== */
-async function getUpcomingSteps(latlng, maxSteps=5){
-  if(!routes.length) return [];
-  const upcomingSteps=[];
-  routes.forEach(r=>{
-    let nearestIdx=-1, minDist=Infinity;
-    r.steps.forEach((s,i)=>{
-      const d=latlng.distanceTo([s.lat,s.lng]);
-      if(d<minDist){ minDist=d; nearestIdx=i; }
-    });
-    if(nearestIdx!==-1){
-      for(let j=nearestIdx; j<Math.min(r.steps.length, nearestIdx+maxSteps); j++){
-        upcomingSteps.push(r.steps[j]);
-      }
-    }
-  });
-  return upcomingSteps;
-}
-
+/* ===== ADAPTIVE DASHBOARD ===== */
+let recentElevations=[];
 async function adaptiveAIDashboard(latlng,heading){
     const currentSpeed = calculateGPSSpeed(latlng);
     const slopeData=await predictElevation(latlng,heading);
@@ -173,7 +153,6 @@ async function adaptiveAIDashboard(latlng,heading){
     let eco={speed:50,gear:3,throttle:45,tip:"Drive smoothly"};
 
     if(routes.length){
-        // Predict 3–5 steps ahead based on route steps
         const upcomingSteps=[];
         routes.forEach(r=>{
             r.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<500) upcomingSteps.push(s); });
@@ -181,7 +160,7 @@ async function adaptiveAIDashboard(latlng,heading){
         upcomingSteps.slice(0,5).forEach(step=>{
             const stepSlope=step.elev-recentElevations[0]||slope;
             const stepEco=ecoAdvisor(step.distance,stepSlope,step.text);
-            eco=stepEco; // adopt last relevant step for dashboard
+            eco=stepEco;
             if(step.element) step.element.title=`Tip: ${stepEco.tip}, Speed: ${stepEco.speed}, Gear: ${stepEco.gear}, Throttle: ${stepEco.throttle}%`;
         });
     }
@@ -193,10 +172,9 @@ async function adaptiveAIDashboard(latlng,heading){
     document.getElementById("throttle").textContent = eco.throttle+"%";
     document.getElementById("ai-tip").textContent = eco.tip;
     totalFuel += (eco.throttle/1000);
-    document.getElementById("fuel-used").textContent = totalFuel.toFixed(2)+" L";
 }
 
-/* ===== GPS speed and idle detection ===== */
+/* ===== GPS SPEED ===== */
 let lastLatLng=null, lastGPSPos=null, lastGPSTime=null, idleStart=null;
 const IDLE_THRESHOLD=3, IDLE_TIME=60;
 function checkIdle(latlng){
@@ -215,9 +193,8 @@ function calculateGPSSpeed(latlng){
     }else{ lastGPSPos=latlng; lastGPSTime=now; return 0; }
 }
 
-/* ===== Predict multi-step elevation ahead ===== */
+/* ===== ELEVATION PREDICTION ===== */
 const ELEVATION_LOOKAHEAD=5, ELEVATION_STEP=10;
-let recentElevations=[];
 async function predictElevation(latlng,heading){
     const R=6378137, pointsAhead=[];
     for(let i=1;i<=ELEVATION_LOOKAHEAD;i++){
@@ -231,10 +208,10 @@ async function predictElevation(latlng,heading){
     const elevs=await getElevations(pointsAhead);
     recentElevations=elevs;
     const smoothSlope = elevs.reduce((a,b,i,arr)=>i===0?a: a + (b-arr[i-1]),0)/(elevs.length-1);
-    const throttleCurve=elevs.map((e,i)=>{ const delta=i===0?0:e-elevs[i-1]; return delta>3?60: delta<-3?25:45; });
-    return {elevs, slope:smoothSlope, throttleCurve};
+    return {elevs, slope:smoothSlope};
 }
-/* ===== GPS Watch ===== */
+
+/* ===== GPS WATCH ===== */
 if(navigator.geolocation){
     navigator.geolocation.watchPosition(async pos=>{
         const latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
@@ -247,7 +224,7 @@ if(navigator.geolocation){
     },()=>console.warn("GPS unavailable"),{enableHighAccuracy:true});
 }
 
-/* ===== Off-route adaptation ===== */
+/* ===== OFF-ROUTE ===== */
 async function checkOffRoute(latlng){
     if(routes.length){
         const nearestRoute=routes[0];
@@ -263,7 +240,7 @@ async function checkOffRoute(latlng){
     }
 }
 
-/* ===== Route creation & step-box integration ===== */
+/* ===== ROUTE CREATION ===== */
 async function createRoute(start,end,color,marker=null,index=null){
     const routeIndex=index!==null?index:routes.length+1;
     const routeColor=color||colors[(routeIndex-1)%colors.length];
@@ -309,14 +286,14 @@ async function createRoute(start,end,color,marker=null,index=null){
     });
 }
 
-/* ===== Add waypoint on map click ===== */
+/* ===== MAP CLICK WAYPOINT ===== */
 map.on('click',e=>{
     const latlng=e.latlng; waypoints.push(latlng);
     const marker=L.marker(latlng).addTo(map); waypointMarkers.push(marker);
     if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length],marker);
 });
 
-/* ===== Rebuild Routes ===== */
+/* ===== REBUILD ROUTES ===== */
 function rebuildRoutes(){
     routes.forEach(r=>{ map.removeControl(r.rc); map.removeLayer(r.group); });
     routes=[]; document.getElementById('routePanel').innerHTML='';
@@ -324,8 +301,7 @@ function rebuildRoutes(){
     for(let i=1;i<waypoints.length;i++){ createRoute(waypoints[i-1],waypoints[i],colors[(i-1)%colors.length],waypointMarkers[i-1],i); }
 }
 
-
-/* ===== Map Toggle ===== */
+/* ===== MAP TOGGLE ===== */
 let mapFull=false;
 document.getElementById("map-toggle").addEventListener("click",()=>{
   const mapContainer=document.querySelector(".map-container");
@@ -340,24 +316,34 @@ document.getElementById("map-toggle").addEventListener("click",()=>{
   }
 });
 
-/* ===== Camera Toggle ===== */
+/* ===== CAMERA TOGGLE ===== */
 const camImg=document.getElementById("camera-feed");
 document.getElementById("enable-camera").onclick=()=>{ camImg.style.filter="none"; document.getElementById("enable-camera").style.display="none"; document.getElementById("disable-camera").style.display="block"; }
 document.getElementById("disable-camera").onclick=()=>{ camImg.style.filter="blur(12px) brightness(0.7)"; document.getElementById("enable-camera").style.display="block"; document.getElementById("disable-camera").style.display="none"; }
 
-/* ===== Search UI ===== */
-const input=document.getElementById('searchInput'),suggestBox=document.getElementById('suggestBox');
-let results=[];
+/* ===== SEARCH ===== */
+const input=document.getElementById('searchInput'), suggestBox=document.getElementById('suggestBox');
 input.oninput=async()=>{
   const q=input.value.trim(); if(!q) return suggestBox.style.display='none';
-  const d=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`).then(r=>r.json()).catch(()=>({features:[]})); results=d.features||[];
-  suggestBox.innerHTML=''; results.forEach((f,i)=>{ const p=f.properties||{},name=p.name||p.city||'Unknown'; const div=document.createElement('div'); div.className='suggest-item'; div.innerHTML=`<b>${name}</b><div style="font-size:12px;color:#bbb;">${[p.city,p.state,p.country].filter(Boolean).join(', ')}</div>`; div.onclick=()=>select(i); suggestBox.appendChild(div); });
+  const d=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`).then(r=>r.json()).catch(()=>({features:[]})); 
+  const results=d.features||[];
+  suggestBox.innerHTML='';
+  results.forEach((f,i)=>{ const p=f.properties||{},name=p.name||p.city||'Unknown'; 
+    const div=document.createElement('div'); div.className='suggest-item'; 
+    div.innerHTML=`<b>${name}</b><div style="font-size:12px;color:#bbb;">${[p.city,p.state,p.country].filter(Boolean).join(', ')}</div>`; 
+    div.onclick=()=>select(i,results); suggestBox.appendChild(div); 
+  });
   suggestBox.style.display=results.length?'block':'none';
 };
 document.addEventListener('click',e=>{if(!suggestBox.contains(e.target)&&e.target!==input) suggestBox.style.display='none';});
-document.getElementById('addBtn').onclick=()=>{if(results.length) select(0);};
-input.addEventListener('keydown',e=>{if(e.key==='Enter'&&results.length) select(0);});
-function select(i){ const f=results[i]; if(!f) return; const [lng,lat]=f.geometry.coordinates,latlng=L.latLng(lat,lng); waypoints.push(latlng); L.marker(latlng).addTo(map); suggestBox.style.display='none'; input.value=''; if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length]); }
+input.addEventListener('keydown',e=>{if(e.key==='Enter'){ select(0,[]); }});
+function select(i,results){ 
+    const f=results[i]; if(!f) return; 
+    const [lng,lat]=f.geometry.coordinates,latlng=L.latLng(lat,lng); 
+    waypoints.push(latlng); L.marker(latlng).addTo(map); 
+    suggestBox.style.display='none'; input.value=''; 
+    if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length]); 
+}
 </script>
 </body>
 </html>
