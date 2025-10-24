@@ -829,6 +829,30 @@ micBtn.onclick = async () => {
   }
 };
 
+/* ===== Request mic permission early ===== */
+window.addEventListener("load", async () => {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("✅ Microphone permission granted");
+    } catch (err) {
+      console.warn("🚫 Microphone permission denied or unavailable:", err);
+    }
+  }
+});
+
+/* ===== Mobile safe area fix ===== */
+html, body {
+  height: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
+  margin: 0;
+}
+
+#routePanel {
+  bottom: calc(2vh + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 </script>
 </body>
 </html> 
@@ -836,4 +860,5 @@ micBtn.onclick = async () => {
 </script>
 </body>
 </html> 
+
 
