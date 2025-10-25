@@ -52,15 +52,7 @@ padding:0.8vh 2vw;border:none;border-radius:1vh;color:#fff;font-weight:bold;curs
 #enable-camera{background:#28a745;}
 #disable-camera{background:#dc3545;display:none;}
 /* === ROUTE PANEL === */
-html, body {
-  height: 100dvh; /* ✅ dynamic viewport fixes mobile safe area */
-}
-body {
-  padding-bottom: env(safe-area-inset-bottom, 2vh);
-}
-#routePanel {
-  bottom: calc(2vh + env(safe-area-inset-bottom, 2vh));
-}
+#routePanel{position:absolute;bottom:2vh;left:2vw;width:270px;max-height:42vh;
 overflow-y:auto;background:rgba(0,0,0,0.6);border-radius:1vh;padding:0.5vh;color:#fff;z-index:999;}
 .route-box{margin-bottom:0.8vh;border-radius:1vh;overflow:hidden;background:rgba(255,255,255,0.05);backdrop-filter:blur(6px);box-shadow:0 0.4vh 1vh rgba(0,0,0,0.5);}
 .route-header{padding:0.6vh 0.6vw;font-weight:bold;display:flex;justify-content:space-between;
@@ -140,7 +132,7 @@ let driverStats={overspeed:0, harshAccel:0, totalPoints:0};
 function updateDriverBehavior(currentSpeed,eco){
     driverStats.totalPoints++;
     if(currentSpeed>eco.speed+5) driverStats.overspeed++;
-    
+
     const lastThrottle=document.getElementById("throttle").dataset.lastThrottle||0;
     const currentThrottle=eco.throttle;
     if(Math.abs(currentThrottle-lastThrottle)>25) driverStats.harshAccel++;
@@ -179,25 +171,39 @@ async function getUpcomingSteps(latlng, maxSteps=5){
 }
 
 async function adaptiveAIDashboard(latlng, heading) {
-  const currentSpeed = calculateGPSSpeed(latlng);
-  const slopeData = await predictElevationAhead(latlng, heading);
-  const slope = slopeData.slope || 0;
+    const currentSpeed = calculateGPSSpeed(latlng);
+    const slopeData = await predictElevationAhead(latlng, heading);  // ✅ fixed call
+    const slope = slopeData.slope;
 
-  // dynamic eco recommendation
-  const dist = 500; // assume mid-range section for prediction
-  const eco = ecoAdvisor(dist, slope * 10, ""); // no fixed turn text
-  
-  // override eco.speed with live GPS if available
-  if (currentSpeed > 0) {
-    eco.speed = Math.round(currentSpeed);
-  }
+    let eco = { speed: 50, gear: 3, throttle: 45, tip: "Drive smoothly" };
 
-  updateDriverBehavior(currentSpeed, eco);
-  document.getElementById("speed").textContent = eco.speed + " km/h";
-  document.getElementById("gear").textContent = eco.gear;
-  document.getElementById("throttle").textContent = eco.throttle + "%";
-  document.getElementById("ai-tip").textContent = eco.tip;
-  totalFuel += (eco.throttle / 1000);
+    if (routes.length) {
+        // Predict 3–5 steps ahead based on route steps
+        const upcomingSteps = [];
+        routes.forEach(r => {
+            r.steps.forEach(s => {
+                const d = latlng.distanceTo([s.lat, s.lng]);
+                if (d < 500) upcomingSteps.push(s);
+            });
+        });
+
+        upcomingSteps.slice(0, 5).forEach(step => {
+            const stepSlope = step.elev - recentElevations[0] || slope;
+            const stepEco = ecoAdvisor(step.distance, stepSlope, step.text);
+            eco = stepEco;  // adopt last relevant step for dashboard
+            if (step.element)
+                step.element.title = `Tip: ${stepEco.tip}, Speed: ${stepEco.speed}, Gear: ${stepEco.gear}, Throttle: ${stepEco.throttle}%`;
+        });
+    }
+
+    updateDriverBehavior(currentSpeed, eco);
+
+    document.getElementById("speed").textContent = eco.speed + " km/h";
+    document.getElementById("gear").textContent = eco.gear;
+    document.getElementById("throttle").textContent = eco.throttle + "%";
+    document.getElementById("ai-tip").textContent = eco.tip;
+    totalFuel += (eco.throttle / 1000);
+    // optional: add fuel display if needed
 }
 
 /* ===== GPS speed and idle detection ===== */
@@ -254,30 +260,19 @@ if(navigator.geolocation){
 }
 
 /* ===== Off-route adaptation ===== */
-async function checkOffRoute(latlng) {
-  if (!routes.length) return;
-  
-  const nearestRoute = routes[0];
-  let minDist = Infinity;
-  
-  nearestRoute.steps.forEach(s => {
-    const d = latlng.distanceTo([s.lat, s.lng]);
-    if (d < minDist) minDist = d;
-  });
-  
-  if (minDist > 30) {
-    console.log("Off-route detected — recalculating...");
-    
-    if (waypoints.length >= 1) {
-      const lastWaypoint = waypoints[waypoints.length - 1];
-      // ✅ remove old route before re-creating
-      map.removeControl(nearestRoute.rc);
-      map.removeLayer(nearestRoute.group);
-      document.getElementById('routePanel').innerHTML = '';
-      routes.splice(0, 1);
-      await createRoute(latlng, lastWaypoint, colors[0]);
+async function checkOffRoute(latlng){
+    if(routes.length){
+        const nearestRoute=routes[0];
+        let minDist=Infinity;
+        nearestRoute.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<minDist) minDist=d; });
+        if(minDist>30){
+            console.log("Off-route detected — recalculating");
+            if(waypoints.length>=1){
+                const lastWaypoint=waypoints[waypoints.length-1];
+                createRoute(latlng,lastWaypoint,colors[routes.length%colors.length]);
+            }
+        }
     }
-  }
 }
 
 /* ===== Route creation & step-box integration ===== */
@@ -397,20 +392,19 @@ function selectResult(i){
 }
 
 /* ===== Voice Search (Mic Button) ===== */
+/* ===== Voice Search (Mic Button) ===== */
 const micBtn = document.getElementById('micBtn');
-const input = document.getElementById('searchInput');
 
-micBtn.addEventListener('click', startVoiceRecognition);
-micBtn.addEventListener('touchstart', startVoiceRecognition);
-
-function startVoiceRecognition() {
+micBtn.onclick = async () => {
   if (!('webkitSpeechRecognition' in window)) {
     alert('Speech Recognition not supported on this browser');
     return;
   }
 
-  navigator.mediaDevices.getUserMedia({ audio: true })
-  .then(() => {
+  try {
+    // ✅ Ask for microphone permission explicitly (like location)
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+
     const recog = new webkitSpeechRecognition();
     recog.lang = 'en-US';
     recog.interimResults = false;
@@ -420,7 +414,7 @@ function startVoiceRecognition() {
     recog.start();
 
     recog.onresult = (e) => {
-      const text = e.results[0][0].transcript.trim();
+      const text = e.results[0][0].transcript;
       input.value = text;
       input.dispatchEvent(new Event('input'));
     };
@@ -433,11 +427,13 @@ function startVoiceRecognition() {
     recog.onend = () => {
       micBtn.textContent = '🎤';
     };
-  })
-  .catch(() => {
-    alert('Please allow microphone access in your browser settings.');
-  });
-}
+
+  } catch (err) {
+    // 🚫 Permission denied or mic unavailable
+    console.error('Microphone access denied:', err);
+    alert('Please allow microphone permission to use voice search.');
+  }
+};
 
 </script>
 </body>
