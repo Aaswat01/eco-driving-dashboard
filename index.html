@@ -244,7 +244,8 @@ async function adaptiveAIDashboard(latlng, heading) {
 
       // Display upcoming step + distance in tip box (before it's reached)
       const upcomingStepDistance = step.distance < 1000 ? `${step.distance.toFixed(0)} m` : `${(step.distance / 1000).toFixed(1)} km`;
-      document.getElementById("ai-tip").textContent = `Upcoming Step: ${step.text} (${upcomingStepDistance})`;
+      document.getElementById("ai-tip").textContent = `Next: ${step.text} (${upcomingStepDistance})`;
+
 
       // Only trigger voice + eco update when driver reaches within 50 m
       if (distanceToStep <= 50 && nextStepReady) {
@@ -259,7 +260,7 @@ async function adaptiveAIDashboard(latlng, heading) {
         if ("speechSynthesis" in window) {
           // 1. Speak Step Instruction and Distance
           const stepMsg = new SpeechSynthesisUtterance(
-            `Turn instruction: ${step.text}. Proceed for ${stepDistanceSpeech}.`
+            `${step.text}. Proceed for ${stepDistanceSpeech}.`
           );
           stepMsg.rate = 1; stepMsg.pitch = 1;
           
