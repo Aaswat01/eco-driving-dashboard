@@ -145,14 +145,9 @@ function updateDriverBehavior(currentSpeed, eco) {
 
     // Habitual warnings
     if (driverStats.overspeed / driverStats.totalPoints > 0.3 && !spokenWarnings.has('overspeedHabit')) {
-        warnings.push("Overspeed habit detected!");
+        warnings.push("Overspeed detected!");
         spokenWarnings.add('overspeedHabit');
     }
-    if (driverStats.harshAccel / driverStats.totalPoints > 0.2 && !spokenWarnings.has('throttleHabit')) {
-        warnings.push("Throttle habit — Drive smoothly!");
-        spokenWarnings.add('throttleHabit');
-    }
-
     // Voice alert (Eco tip is handled separately in adaptiveAIDashboard now)
     if ('speechSynthesis' in window && warnings.length) {
         const msg = new SpeechSynthesisUtterance(warnings.join(" "));
@@ -661,4 +656,5 @@ micBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
