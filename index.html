@@ -514,26 +514,39 @@ function speakCurrentStep() {
   );
   ecoMsg.rate = 1; ecoMsg.pitch = 1;
 
-  if ("speechSynthesis" in window) {
-    // Chain the messages
-    stepMsg.onend = () => {
-      // Update tip box to Eco Tip after step instruction finishes
-      document.getElementById("ai-tip").textContent = `Tip: ${eco.tip}`; 
-      speechSynthesis.speak(ecoMsg);
-    };
-    
-    ecoMsg.onend = () => {
-      step.spoken = true;
-    };
+if ("speechSynthesis" in window) {
+  // 1️⃣ clear any queued utterances before speaking
+  speechSynthesis.cancel();
 
-    // Start the speech chain and update tip box to Step Instruction
-    document.getElementById("ai-tip").textContent = `Step 1: ${step.text}`; 
-    speechSynthesis.speak(stepMsg);
-  } else {
-    document.getElementById("ai-tip").textContent = `Tip: ${eco.tip}`;
-    step.spoken = true;
-  }
+  const stepMsg = new SpeechSynthesisUtterance(
+    `${step.text}. Proceed for ${stepDistanceSpeech}.`
+  );
+  stepMsg.rate = 1; stepMsg.pitch = 1;
+
+  const ecoMsg = new SpeechSynthesisUtterance(
+    `Eco Tip: Recommended speed ${ecoNow.speed} kilometers per hour, gear ${ecoNow.gear}. ${ecoNow.tip}`
+  );
+  ecoMsg.rate = 1; ecoMsg.pitch = 1;
+
+  stepMsg.onend = () => {
+    // 2️⃣ again clear before eco tip
+    speechSynthesis.cancel();
+    document.getElementById("ai-tip").textContent = `Tip: ${ecoNow.tip}`;
+    speechSynthesis.speak(ecoMsg);
+  };
+
+  ecoMsg.onend = () => {
+    step.spoken = true;
+    if (step.element) step.element.remove();
+    if (step.lineLayer) route.group.removeLayer(step.lineLayer);
+    currentStepIndex++;
+    nextStepReady = true;
+  };
+
+  document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`;
+  speechSynthesis.speak(stepMsg);
 }
+
 
 /* ===== Add waypoint on map click (Unchanged) ===== */
 map.on('click',e=>{
@@ -648,3 +661,4 @@ micBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
