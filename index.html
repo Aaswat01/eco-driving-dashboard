@@ -9,9 +9,9 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
-  background:radial-gradient(circle at top left,#0f1c2e,#1c2b44,#2a3b60);
-  font-family:"Segoe UI",Arial,sans-serif;color:#fff;
-  height:100vh;display:flex;flex-direction:column;overflow:hidden;
+background:radial-gradient(circle at top left,#0f1c2e,#1c2b44,#2a3b60);
+font-family:"Segoe UI",Arial,sans-serif;color:#fff;
+height:100vh;display:flex;flex-direction:column;overflow:hidden;
 }
 /* === HEADER === */
 .ai-tip-box{flex:0 0 auto;background:#ffa500;color:#000;border-radius:1vh;
@@ -59,23 +59,23 @@ align-items:center;color:#fff;font-size:0.9rem;}
 <body>
 <div class="ai-tip-box" id="ai-tip">Drive smoothly</div>
 <div class="stats-row">
-  <div class="stat-card speed-box"><div class="stat-label">Speed</div><div class="stat-value" id="speed">0 km/h</div></div>
-  <div class="stat-card gear-box"><div class="stat-label">Gear</div><div class="stat-value" id="gear">N</div></div>
-  <div class="stat-card throttle-box"><div class="stat-label">Throttle</div><div class="stat-value" id="throttle">0%</div></div>
+  <div class="stat-card speed-box"><div class="stat-label">Speed</div><div class="stat-value" id="speed">0 km/h</div></div>
+  <div class="stat-card gear-box"><div class="stat-label">Gear</div><div class="stat-value" id="gear">N</div></div>
+  <div class="stat-card throttle-box"><div class="stat-label">Throttle</div><div class="stat-value" id="throttle">0%</div></div>
 </div>
 
 <div class="search-row">
-  <input type="text" id="searchInput" placeholder="Search destination...">
-  <button id="micBtn">🎤</button>
-  <div id="suggestBox"></div>
+  <input type="text" id="searchInput" placeholder="Search destination...">
+  <button id="micBtn">🎤</button>
+  <div id="suggestBox"></div>
 </div>
 
 <div class="main-section">
-  <div class="map-container">
-    <div id="map" class="map"></div>
-    <button id="map-toggle">Full Map</button>
-    <div id="routePanel"></div>
-  </div>
+  <div class="map-container">
+    <div id="map" class="map"></div>
+    <button id="map-toggle">Full Map</button>
+    <div id="routePanel"></div>
+  </div>
 </div> <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script>
@@ -97,8 +97,8 @@ function ecoAdvisor(dist,elev,turnText){
                    t.includes("roundabout")?"roundabout":"normal";
 
     if(t.includes("left")||t.includes("right")) { speed=25; gear=2; throttle=35; tip="Slow for turn"; }
-    else if(elev>6) { speed=30; gear=2; throttle=55; tip="Uphill — maintain torque"; }
-    else if(elev<-6){ speed=55; gear=5; throttle=25; tip="Downhill — coast gently"; }
+    else if(elev>6) { speed=30; gear=2; throttle=55; tip="Downhill"; }
+    else if(elev<-6){ speed=55; gear=5; throttle=25; tip="Uphill "; }
     else if(dist>800){ speed=65; gear=5; throttle=50; tip="Long straight — steady speed"; }
     else if(dist>300){ speed=55; gear=4; throttle=45; tip="Smooth cruising"; }
 
@@ -116,7 +116,7 @@ function ecoAdvisor(dist,elev,turnText){
 
 /* ===== Driver Behavior Monitoring (Unchanged) ===== */
 let driverStats = { overspeed: 0, harshAccel: 0, totalPoints: 0 };
-let spokenWarnings = new Set();  // Track unique warnings spoken
+let spokenWarnings = new Set();  // Track unique warnings spoken
 
 function updateDriverBehavior(currentSpeed, eco) {
     driverStats.totalPoints++;
@@ -126,7 +126,7 @@ function updateDriverBehavior(currentSpeed, eco) {
     if (currentSpeed > eco.speed + 5) {
         driverStats.overspeed++;
         if (!spokenWarnings.has('overspeed')) {
-            warnings.push("Overspeeding detected — Slow down!");
+            warnings.push("Overspeeding detected");
             spokenWarnings.add('overspeed');
         }
     }
@@ -137,7 +137,7 @@ function updateDriverBehavior(currentSpeed, eco) {
     if (Math.abs(currentThrottle - lastThrottle) > 25) {
         driverStats.harshAccel++;
         if (!spokenWarnings.has('harshAccel')) {
-            warnings.push("Harsh acceleration — Smooth throttle!");
+            warnings.push("Harsh acceleration");
             spokenWarnings.add('harshAccel');
         }
     }
@@ -148,6 +148,7 @@ function updateDriverBehavior(currentSpeed, eco) {
         warnings.push("Overspeed detected!");
         spokenWarnings.add('overspeedHabit');
     }
+
     // Voice alert (Eco tip is handled separately in adaptiveAIDashboard now)
     if ('speechSynthesis' in window && warnings.length) {
         const msg = new SpeechSynthesisUtterance(warnings.join(" "));
@@ -199,7 +200,7 @@ async function getUpcomingSteps(latlng, maxSteps=5){
   return upcomingSteps;
 }
 
-/* ====== Step-by-Step AI Voice Guidance & Dashboard Update (MODIFIED) ====== */
+/* ====== Step-by-Step AI Voice Guidance & Dashboard Update (FIXED) ====== */
 let activeRouteIndex = null;
 let currentStepIndex = 0;
 let nextStepReady = true;
@@ -237,18 +238,18 @@ async function adaptiveAIDashboard(latlng, heading) {
       }
       // --- END Remaining Distance Calculation ---
 
-      // Display upcoming step + distance in tip box (before it's reached)
-      const upcomingStepDistance = step.distance < 1000 ? `${step.distance.toFixed(0)} m` : `${(step.distance / 1000).toFixed(1)} km`;
-      document.getElementById("ai-tip").textContent = `Next: ${step.text} (${upcomingStepDistance})`;
+      // Display upcoming step + distance in tip box (before it's reached)
+      const upcomingStepDistance = step.distance < 1000 ? `${step.distance.toFixed(0)} m` : `${(step.distance / 1000).toFixed(1)} km`;
+      document.getElementById("ai-tip").textContent = `Next: ${step.text} (${upcomingStepDistance})`;
 
 
-      // Only trigger voice + eco update when driver reaches within 50 m
+      // FIX: Only trigger voice + eco update when driver reaches within 50 m AND nextStepReady is true
       if (distanceToStep <= 50 && nextStepReady) {
-        nextStepReady = false;
+        nextStepReady = false; // LOCK: Prevent re-entry
 
         const ecoNow = dynamicEcoAdvisor(currentSpeed, slope, distanceToStep);
         eco = ecoNow;
-        // Determine step distance for speech
+        // Determine step distance for speech
         const stepDistanceSpeech = step.distance < 1000 ? `${step.distance.toFixed(0)} meters` : `${(step.distance / 1000).toFixed(1)} kilometers`;
 
         // Voice alert (sequential speech)
@@ -258,7 +259,7 @@ async function adaptiveAIDashboard(latlng, heading) {
             `${step.text}. Proceed for ${stepDistanceSpeech}.`
           );
           stepMsg.rate = 1; stepMsg.pitch = 1;
-          
+          
           // 2. Speak Eco Tip after step instruction
           const ecoMsg = new SpeechSynthesisUtterance(
             `Eco Tip: Recommended speed ${ecoNow.speed} kilometers per hour, gear ${ecoNow.gear}. ${ecoNow.tip}`
@@ -266,33 +267,37 @@ async function adaptiveAIDashboard(latlng, heading) {
           ecoMsg.rate = 1; ecoMsg.pitch = 1;
 
           // Chain the messages
-          // After step instruction, update tip box to Eco Tip and speak eco tip
+          // After step instruction, update tip box to Eco Tip and speak eco tip
           stepMsg.onend = () => {
-            document.getElementById("ai-tip").textContent = `Tip: ${ecoNow.tip}`; 
+            // Stop any previous speech before starting the new one (extra safety)
+            if (speechSynthesis.speaking) { speechSynthesis.cancel(); }
+            document.getElementById("ai-tip").textContent = `Tip: ${ecoNow.tip}`; 
             speechSynthesis.speak(ecoMsg);
           };
-          
-          // After eco tip, advance to next step
+          
+          // After eco tip, advance to next step and UNLOCK
           ecoMsg.onend = () => {
             step.spoken = true;
             if (step.element) { step.element.remove(); }
             if (step.lineLayer) { route.group.removeLayer(step.lineLayer); }
-            currentStepIndex++;
-            nextStepReady = true; // Allow next step only after current one finishes
+            currentStepIndex++; // Advance step
+            nextStepReady = true; // UNLOCK
           };
-          
+          
           // Start the speech chain and update tip box to Step Instruction
-          document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`; 
+          document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`;
+          // Stop any previous speech before starting the new one
+          if (speechSynthesis.speaking) { speechSynthesis.cancel(); }
           speechSynthesis.speak(stepMsg);
         } else {
-            // Fallback for non-speech browsers: update tip box and advance
-            document.getElementById("ai-tip").textContent = `Tip: ${ecoNow.tip}`;
-            step.spoken = true;
+            // Fallback for non-speech browsers: update tip box and advance/unlock immediately
+            document.getElementById("ai-tip").textContent = `Tip: ${ecoNow.tip}`;
+            step.spoken = true;
             if (step.element) { step.element.remove(); }
             if (step.lineLayer) { route.group.removeLayer(step.lineLayer); }
-            currentStepIndex++;
+            currentStepIndex++;
             nextStepReady = true;
-        }
+        }
       }
     } else {
       // Route finished
@@ -302,7 +307,7 @@ async function adaptiveAIDashboard(latlng, heading) {
       if (distanceEl) {
         distanceEl.textContent = `0.0 km remaining`;
       }
-        
+        
       if ("speechSynthesis" in window)
         speechSynthesis.speak(new SpeechSynthesisUtterance("Destination reached"));
       activeRouteIndex = null;
@@ -340,11 +345,11 @@ function calculateGPSSpeed(latlng){
 }
 
 /* ===== Predict multi-step elevation ahead (Unchanged) ===== */
-const ELEVATION_INTERVAL=50; 
-const LOOKAHEAD_DISTANCE=400; 
+const ELEVATION_INTERVAL=50; 
+const LOOKAHEAD_DISTANCE=400; 
 let recentElevations=[];
 async function predictElevationAhead(latlng,heading){
-    const R=6378137; 
+    const R=6378137; 
     const pointsAhead=[];
     for(let d=ELEVATION_INTERVAL; d<=LOOKAHEAD_DISTANCE; d+=ELEVATION_INTERVAL){
         const latRad=latlng.lat*Math.PI/180, lonRad=latlng.lng*Math.PI/180;
@@ -391,8 +396,8 @@ async function checkOffRoute(latlng){
 /* ===== Route creation & step-box integration (Unchanged logic) ===== */
 async function createRoute(start, end, color, marker = null, index = null) {
     // Determine the 0-based index for the internal array and 1-based index for display/ID
-    const routeIndex = index !== null ? index : routes.length; 
-    const displayIndex = index !== null ? index : routes.length + 1; 
+    const routeIndex = index !== null ? index : routes.length; 
+    const displayIndex = index !== null ? index : routes.length + 1; 
 
     // Check for duplicate destination
     const endKey = `${end.lat.toFixed(6)},${end.lng.toFixed(6)}`;
@@ -423,7 +428,7 @@ async function createRoute(start, end, color, marker = null, index = null) {
     header.querySelector('button').onclick = (e) => {
         e.stopPropagation();
         map.removeControl(rc); map.removeLayer(group); box.remove();
-        const idx = routes.findIndex(r => r.rc === rc); 
+        const idx = routes.findIndex(r => r.rc === rc); 
         if (idx !== -1) {
             // If active route deleted, reset tip box
             if (activeRouteIndex === idx) {
@@ -434,7 +439,7 @@ async function createRoute(start, end, color, marker = null, index = null) {
             routes.splice(idx, 1);
         }
         if (marker) {
-            const wpIdx = waypointMarkers.indexOf(marker);  
+            const wpIdx = waypointMarkers.indexOf(marker);  
             if (wpIdx !== -1) { map.removeLayer(marker); waypointMarkers.splice(wpIdx, 1); waypoints.splice(wpIdx + 1, 1); }
         }
         rebuildRoutes();
@@ -460,11 +465,11 @@ async function createRoute(start, end, color, marker = null, index = null) {
             item.addEventListener('mouseenter', () => stepLine.setStyle({ color: '#00FF00', weight: 6, opacity: 0.9 }));
             item.addEventListener('mouseleave', () => stepLine.setStyle({ color: routeColor, weight: 5, opacity: 0.5 }));
             // --- UPDATED: Store distance, element, and lineLayer ---
-            steps.push({ 
-                lat: coords[idxStart].lat, 
-                lng: coords[idxStart].lng, 
-                text: s.text, 
-                elev, 
+            steps.push({ 
+                lat: coords[idxStart].lat, 
+                lng: coords[idxStart].lng, 
+                text: s.text, 
+                elev, 
                 element: item, // DOM element for removal
                 distance: s.distance, // Distance for remaining distance calc
                 lineLayer: stepLine // Leaflet layer for removal
@@ -487,7 +492,7 @@ async function createRoute(start, end, color, marker = null, index = null) {
 }
 
 
-/*================Multi-step AI Tip Blending + Voice (MODIFIED for separation)=============*/
+/*================Multi-step AI Tip Blending + Voice (FIXED)=============*/
 function speakCurrentStep() {
   if (activeRouteIndex === null) return;
   const route = routes[activeRouteIndex];
@@ -502,46 +507,34 @@ function speakCurrentStep() {
     `Starting route. Step 1: ${step.text}. Proceed for ${stepDistance}`
   );
   stepMsg.rate = 1; stepMsg.pitch = 1;
-  
+  
   // 2. Speak Eco Tip after step instruction
   const ecoMsg = new SpeechSynthesisUtterance(
     `Eco Tip: ${eco.tip}`
   );
   ecoMsg.rate = 1; ecoMsg.pitch = 1;
 
-if ("speechSynthesis" in window) {
-  // 1️⃣ clear any queued utterances before speaking
-  speechSynthesis.cancel();
+  if ("speechSynthesis" in window) {
+    // Chain the messages
+    stepMsg.onend = () => {
+      // Update tip box to Eco Tip after step instruction finishes
+      document.getElementById("ai-tip").textContent = `Tip: ${eco.tip}`; 
+      speechSynthesis.speak(ecoMsg);
+    };
+    
+    ecoMsg.onend = () => {
+      step.spoken = true;
+    };
 
-  const stepMsg = new SpeechSynthesisUtterance(
-    `${step.text}. Proceed for ${stepDistanceSpeech}.`
-  );
-  stepMsg.rate = 1; stepMsg.pitch = 1;
-
-  const ecoMsg = new SpeechSynthesisUtterance(
-    `Eco Tip: Recommended speed ${ecoNow.speed} kilometers per hour, gear ${ecoNow.gear}. ${ecoNow.tip}`
-  );
-  ecoMsg.rate = 1; ecoMsg.pitch = 1;
-
-  stepMsg.onend = () => {
-    // 2️⃣ again clear before eco tip
-    speechSynthesis.cancel();
-    document.getElementById("ai-tip").textContent = `Tip: ${ecoNow.tip}`;
-    speechSynthesis.speak(ecoMsg);
-  };
-
-  ecoMsg.onend = () => {
-    step.spoken = true;
-    if (step.element) step.element.remove();
-    if (step.lineLayer) route.group.removeLayer(step.lineLayer);
-    currentStepIndex++;
-    nextStepReady = true;
-  };
-
-  document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`;
-  speechSynthesis.speak(stepMsg);
+    // Start the speech chain and update tip box to Step Instruction
+    document.getElementById("ai-tip").textContent = `Step 1: ${step.text}`; 
+    if (speechSynthesis.speaking) { speechSynthesis.cancel(); } // Ensure no old messages interfere
+    speechSynthesis.speak(stepMsg);
+  } else {
+    document.getElementById("ai-tip").textContent = `Tip: ${eco.tip}`;
+    step.spoken = true;
+  }
 }
-
 
 /* ===== Add waypoint on map click (Unchanged) ===== */
 map.on('click',e=>{
@@ -656,5 +649,3 @@ micBtn.onclick = async () => {
 </script>
 </body>
 </html>
-
-
