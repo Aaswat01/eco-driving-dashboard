@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Driving Dashboard</title>
+<title>AI Eco Driving Dashboard</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
@@ -179,6 +179,8 @@ const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BF
 
 // Store for road type information
 let currentRoadType = "city"; 
+let lastStepLatLng = null;
+let lastStepAdvanceTime = 0;
 
 /* ===== Road Type Detection (FIXED for Global Use) ===== */
 async function getRoadType(latlng) {
@@ -386,6 +388,7 @@ async function adaptiveAIDashboard(latlng, heading) {
       const upcomingStepDistance = step.distance < 1000 ? `${step.distance.toFixed(0)} m` : `${(step.distance / 1000).toFixed(1)} km`;
       document.getElementById("ai-tip").textContent = `Next: ${step.text} (${upcomingStepDistance}) | Eco: ${eco.tip}`;
 
+      if (!driverCountry) updateDriverCountry(latlng);
 
       // Voice/Step Trigger (FIXED)
       if (distanceToStep <= 100 && nextStepReady) { // Trigger earlier at 100m
@@ -436,14 +439,26 @@ async function adaptiveAIDashboard(latlng, heading) {
             speechSynthesis.speak(ecoMsg);
           };
           
-          // Failsafe Timer (15 seconds)
-          speechTimer = setTimeout(() => {
-            console.warn("Speech failed to complete. Forcing step advance.");
-            advanceStep();
-          }, 15000); // 15 seconds
+          // ✅ Smart Failsafe Timer (checks distance instead of time only)
+          clearTimeout(speechTimer);
+          speechTimer = setTimeout(() => {
+            const driverMoved = lastStepLatLng ? latlng.distanceTo(lastStepLatLng) > 25 : false;
+            const stillFarFromStep = distanceToStep > 120;
+            const longSinceLastAdvance = Date.now() - lastStepAdvanceTime > 60000; // 60s
+            if (currentSpeed < 5) return; // Don't advance while stopped
+            if (driverMoved && distanceToStep <= 80) {
+              console.warn("Driver reached step — advancing.");
+              advanceStep();
+            } else if (longSinceLastAdvance && stillFarFromStep) {
+              console.warn("Idle too long — skipping speech repeat only.");
+              nextStepReady = true;
+            }
+          }, 10000); // recheck every 10 s instead of fixed 15 s
 
           // Start the speech chain
           document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`;
+          lastStepLatLng = latlng;                 // Save position when step starts
+          lastStepAdvanceTime = Date.now();        // Reset step timer
           speechSynthesis.speak(stepMsg);
 
         } else {
@@ -580,6 +595,19 @@ if(navigator.geolocation){
     },()=>console.warn("GPS unavailable"),{enableHighAccuracy:true, maximumAge: 1000, timeout: 5000});
 }
 
+let driverCountry = null;
+
+async function updateDriverCountry(latlng) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=5&addressdetails=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+    driverCountry = data.address && (data.address.country_code || "").toUpperCase();
+    console.log("📍 Driver country detected:", driverCountry);
+  } catch (err) {
+    console.warn("Country fetch failed:", err);
+  }
+}
 /* ===== Off-route adaptation (Unchanged) ===== */
 async function checkOffRoute(latlng){
     if(routes.length){
@@ -839,7 +867,7 @@ locateBtn.addEventListener("click", () => {
   autoFollow = !autoFollow;
 
   const userPos = userMarker.getLatLng();
-  map.setView(userPos, 25, { animate: true });
+  map.setView(userPos, 19, { animate: true });
 
   // Button feedback animation
   locateBtn.style.transform = "scale(0.9)";
@@ -861,29 +889,59 @@ const input = document.getElementById("searchInput");
 const suggestBox = document.getElementById("suggestBox");
 let results = [];
 
-async function getSearchResults(q) {
+async function getSearchResults(query) {
   const center = userMarker ? userMarker.getLatLng() : map.getCenter();
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&addressdetails=1&limit=8&viewbox=${center.lng-1},${center.lat+1},${center.lng+1},${center.lat-1}&bounded=1`;
-  const res = await fetch(url, { headers: { "Accept-Language": "en" } });
-  return await res.json();
+
+  // Use photon.komoot.de for richer, faster autocomplete
+  const photonURL = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${center.lat}&lon=${center.lng}&limit=8&lang=${driverCountry ? driverCountry.toLowerCase() : 'en'}`;
+  let data = [];
+
+  try {
+    const res = await fetch(photonURL);
+    const json = await res.json();
+    data = json.features.map(f => ({
+      name: f.properties.name || f.properties.street || f.properties.locality || 'Unnamed',
+      display_name: [f.properties.name, f.properties.city, f.properties.country].filter(Boolean).join(", "),
+      lat: f.geometry.coordinates[1],
+      lon: f.geometry.coordinates[0],
+    }));
+  } catch (err) {
+    console.warn("Photon search failed, falling back to Nominatim:", err);
+
+    // Fallback to Nominatim if Photon fails
+    const nominatimURL = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=8&countrycodes=${driverCountry ? driverCountry : ''}`;
+    const res = await fetch(nominatimURL);
+    data = await res.json();
+    data = data.map(f => ({
+      name: f.display_name.split(",")[0],
+      display_name: f.display_name,
+      lat: f.lat,
+      lon: f.lon,
+    }));
+  }
+
+  return data;
 }
 
 input.oninput = async () => {
   const q = input.value.trim();
   if (!q) return (suggestBox.style.display = "none");
+
   const data = await getSearchResults(q);
   results = data;
+
   suggestBox.innerHTML = "";
   data.forEach((f, i) => {
     const div = document.createElement("div");
     div.className = "suggest-item";
-    div.innerHTML = `<b>${f.display_name.split(",")[0]}</b>
+    div.innerHTML = `<b>${f.name}</b>
                      <div style="font-size:12px;color:#bbb;">${f.display_name}</div>`;
     div.onclick = () => selectResult(i);
     suggestBox.appendChild(div);
   });
   suggestBox.style.display = data.length ? "block" : "none";
 };
+
 
 document.addEventListener("click", e => {
   if (!suggestBox.contains(e.target) && e.target !== input)
@@ -948,4 +1006,3 @@ micBtn.onclick = async () => {
 </script>
 </body>
 </html>
-
