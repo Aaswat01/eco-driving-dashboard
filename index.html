@@ -888,60 +888,71 @@ locateBtn.addEventListener("click", () => {
 const input = document.getElementById("searchInput");
 const suggestBox = document.getElementById("suggestBox");
 let results = [];
+let searchTimer = null;
 
 async function getSearchResults(query) {
   const center = userMarker ? userMarker.getLatLng() : map.getCenter();
+  const lang = driverCountry ? driverCountry.toLowerCase() : "en";
 
-  // Use photon.komoot.de for richer, faster autocomplete
-  const photonURL = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${center.lat}&lon=${center.lng}&limit=8&lang=${driverCountry ? driverCountry.toLowerCase() : 'en'}`;
-  let data = [];
-
+  // Use Photon first (faster + better local context)
+  const photonURL = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${center.lat}&lon=${center.lng}&limit=8&lang=${lang}`;
   try {
-    const res = await fetch(photonURL);
+    const res = await fetch(photonURL, { cache: "no-store" });
     const json = await res.json();
-    data = json.features.map(f => ({
-      name: f.properties.name || f.properties.street || f.properties.locality || 'Unnamed',
-      display_name: [f.properties.name, f.properties.city, f.properties.country].filter(Boolean).join(", "),
-      lat: f.geometry.coordinates[1],
-      lon: f.geometry.coordinates[0],
-    }));
+    if (json.features && json.features.length) {
+      return json.features.map(f => ({
+        name: f.properties.name || f.properties.street || f.properties.locality || "Unnamed",
+        display_name: [f.properties.name, f.properties.city, f.properties.country].filter(Boolean).join(", "),
+        lat: f.geometry.coordinates[1],
+        lon: f.geometry.coordinates[0]
+      }));
+    }
   } catch (err) {
-    console.warn("Photon search failed, falling back to Nominatim:", err);
-
-    // Fallback to Nominatim if Photon fails
-    const nominatimURL = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=8&countrycodes=${driverCountry ? driverCountry : ''}`;
-    const res = await fetch(nominatimURL);
-    data = await res.json();
-    data = data.map(f => ({
-      name: f.display_name.split(",")[0],
-      display_name: f.display_name,
-      lat: f.lat,
-      lon: f.lon,
-    }));
+    console.warn("Photon failed, switching to Nominatim fallback:", err);
   }
 
-  return data;
+  // Fallback: Nominatim (slower but reliable)
+  try {
+    const nomURL = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&accept-language=${lang}`;
+    const res = await fetch(nomURL, { cache: "no-store" });
+    const data = await res.json();
+    return data.map(f => ({
+      name: f.display_name.split(",")[0],
+      display_name: f.display_name,
+      lat: parseFloat(f.lat),
+      lon: parseFloat(f.lon)
+    }));
+  } catch (err) {
+    console.error("Nominatim failed:", err);
+    return [];
+  }
 }
 
-input.oninput = async () => {
+// Debounced input listener for smooth UX
+input.oninput = () => {
   const q = input.value.trim();
+  if (searchTimer) clearTimeout(searchTimer);
   if (!q) return (suggestBox.style.display = "none");
 
-  const data = await getSearchResults(q);
-  results = data;
+  searchTimer = setTimeout(async () => {
+    const data = await getSearchResults(q);
+    results = data;
+    suggestBox.innerHTML = "";
+    if (!data.length) {
+      suggestBox.style.display = "none";
+      return;
+    }
 
-  suggestBox.innerHTML = "";
-  data.forEach((f, i) => {
-    const div = document.createElement("div");
-    div.className = "suggest-item";
-    div.innerHTML = `<b>${f.name}</b>
-                     <div style="font-size:12px;color:#bbb;">${f.display_name}</div>`;
-    div.onclick = () => selectResult(i);
-    suggestBox.appendChild(div);
-  });
-  suggestBox.style.display = data.length ? "block" : "none";
+    data.forEach((f, i) => {
+      const div = document.createElement("div");
+      div.className = "suggest-item";
+      div.innerHTML = `<b>${f.name}</b><div style="font-size:12px;color:#bbb;">${f.display_name}</div>`;
+      div.onclick = () => selectResult(i);
+      suggestBox.appendChild(div);
+    });
+    suggestBox.style.display = "block";
+  }, 300); // debounce for 300 ms
 };
-
 
 document.addEventListener("click", e => {
   if (!suggestBox.contains(e.target) && e.target !== input)
