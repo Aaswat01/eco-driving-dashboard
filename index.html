@@ -90,6 +90,49 @@ align-items:center;color:#fff;font-size:0.9rem;}
     transform-origin: center;
     transition: transform 0.3s linear;
 }
+/* === Slide-up Approval Panel === */
+#approvalPanel{
+  position:absolute;
+  left:50%;
+  bottom:1.5vh;
+  transform:translate(-50%, 130%);
+  width:min(92vw,460px);
+  background:rgba(20,24,36,0.96);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:14px;
+  box-shadow:0 0.8vh 2vh rgba(0,0,0,0.5);
+  padding:12px 14px;
+  z-index:1100;
+  transition:transform .28s ease;
+  backdrop-filter:blur(6px);
+}
+#approvalPanel.show{ transform:translate(-50%, 0); }
+
+.approval-row{ display:flex; gap:10px; align-items:center; }
+.approval-icon{
+  flex:0 0 40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  background:#24324f; font-size:1.2rem;
+}
+.approval-main{ flex:1; min-width:0; }
+.approval-title{ font-weight:700; font-size:0.98rem; line-height:1.2; }
+.approval-sub{ font-size:0.82rem; opacity:0.8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.approval-actions{ display:flex; gap:10px; margin-top:10px; }
+.btn-ghost, .btn-solid{
+  flex:1; padding:10px 12px; border-radius:10px; font-weight:700; border:none; cursor:pointer;
+  box-shadow:0 0.4vh 1.2vh rgba(0,0,0,0.35);
+}
+.btn-ghost{ background:transparent; border:1px solid rgba(255,255,255,0.22); color:#fff; }
+.btn-ghost:hover{ background:rgba(255,255,255,0.07); }
+.btn-solid{ background:#00b36b; color:#fff; }
+.btn-solid:hover{ filter:brightness(0.95); }
+
+.approval-chips{ display:flex; gap:8px; margin-top:6px; }
+.chip{
+  font-size:0.78rem; padding:5px 8px; border-radius:8px;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12);
+}
 
 </style>
 </head>
@@ -114,6 +157,24 @@ align-items:center;color:#fff;font-size:0.9rem;}
       <!-- 🆕 Locate Me (Target) Button -->
     <button id="locate-btn" title="Recenter to my location">🎯</button>
     <div id="routePanel"></div>
+    <!-- Route Approval Panel (hidden by default) -->
+    <div id="approvalPanel" aria-live="polite">
+      <div class="approval-row">
+        <div class="approval-icon">📍</div>
+        <div class="approval-main">
+          <div class="approval-title" id="approvalTitle">Start navigation?</div>
+          <div class="approval-sub" id="approvalSubtitle">Destination</div>
+          <div class="approval-chips">
+            <div class="chip" id="approvalDistance">—</div>
+            <div class="chip" id="approvalDuration">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="approval-actions">
+        <button id="approvalCancel" class="btn-ghost">Cancel</button>
+        <button id="approvalStart"  class="btn-solid">Start</button>
+      </div>
+    </div>
   </div>
 </div> <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
@@ -181,6 +242,126 @@ const colors=['#FF6B6B','#4DA6FF','#FFD93D','#6BCB77','#FF8C00','#9B59B6','#00BF
 let currentRoadType = "city"; 
 let lastStepLatLng = null;
 let lastStepAdvanceTime = 0;
+/* ===== Preview Route State ===== */
+let preview = {
+  active: false,
+  group: null,
+  polyline: null,
+  osrmRoute: null,
+  start: null,
+  end: null,
+  destLabel: "",
+  tempMarker: null
+};
+
+const approvalPanel = document.getElementById("approvalPanel");
+const approvalTitle = document.getElementById("approvalTitle");
+const approvalSubtitle = document.getElementById("approvalSubtitle");
+const approvalDistance = document.getElementById("approvalDistance");
+const approvalDuration = document.getElementById("approvalDuration");
+const approvalStartBtn = document.getElementById("approvalStart");
+const approvalCancelBtn = document.getElementById("approvalCancel");
+
+/* Format helpers */
+function fmtKm(m){ return (m/1000).toFixed(m>=10000 ? 0 : 1) + " km"; }
+function fmtMin(s){
+  const m = Math.round(s/60);
+  if (m < 60) return m + " min";
+  const h = Math.floor(m/60), mm = m%60;  
+  return `${h} hr ${mm?mm+" min":""}`.trim();
+}
+
+/* Clear preview visuals/state */
+function clearPreview(){
+  if (preview.polyline && preview.group){
+    try { preview.group.removeLayer(preview.polyline); } catch {}
+  }
+  if (preview.group){ try { map.removeLayer(preview.group); } catch {} }
+  if (preview.tempMarker){ try { map.removeLayer(preview.tempMarker); } catch {} }
+
+  preview = {
+    active:false, group:null, polyline:null, osrmRoute:null,
+    start:null, end:null, destLabel:"", tempMarker:null
+  };
+  approvalPanel.classList.remove("show");
+}
+
+/* Build preview polyline using OSRM (same path quality as route) */
+function buildPreviewRoute(startLL, endLL, labelText){
+  clearPreview();
+
+  const router = L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' });
+  const wp = [{ latLng: L.latLng(startLL) }, { latLng: L.latLng(endLL) }];
+
+  router.route(wp, (err, routesResp) => {
+    if (err || !routesResp || !routesResp[0]) {
+      console.warn("Preview routing failed:", err);
+      return;
+    }
+    const r = routesResp[0];
+    preview.active = true;
+    preview.osrmRoute = r;
+    preview.start = L.latLng(startLL);
+    preview.end = L.latLng(endLL);
+    preview.destLabel = labelText || "Selected destination";
+    preview.group = L.layerGroup().addTo(map);
+
+    // Same visual style as your routes (no dashes, proper path)
+    preview.polyline = L.polyline(
+      r.coordinates.map(c => [c.lat, c.lng]),
+      { color: '#4DA6FF', weight: 5, opacity: 0.9 }
+    ).addTo(preview.group);
+
+    // Populate panel
+    approvalTitle.textContent = "Start navigation?";
+    approvalSubtitle.textContent = preview.destLabel;
+    approvalDistance.textContent = fmtKm(r.summary.totalDistance);
+    approvalDuration.textContent = fmtMin(r.summary.totalTime);
+
+    // Show panel
+    approvalPanel.classList.add("show");
+
+    // Do NOT start step boxes/speech/tips here (preview mode)
+  });
+}
+
+/* Open preview from a latlng + label; optionally add a temporary marker */
+function openPreviewTo(latlng, label, addTempMarker = true){
+  const start = userMarker ? userMarker.getLatLng() : map.getCenter();
+  if (addTempMarker){
+    // remove previous temp marker if any
+    if (preview.tempMarker) { try { map.removeLayer(preview.tempMarker); } catch {} }
+    preview.tempMarker = L.marker(latlng).addTo(map);
+  }
+  buildPreviewRoute(start, latlng, label);
+}
+// Start -> convert preview into an official route
+approvalStartBtn.addEventListener("click", () => {
+  if (!preview.active || !preview.end) return;
+
+  // ensure waypoint[0] is current driver position
+  const start = userMarker ? userMarker.getLatLng() : map.getCenter();
+  if (!waypoints.length) waypoints.push(start); else waypoints[0] = start;
+
+  // make a persistent destination marker
+  const destMarker = L.marker(preview.end).addTo(map);
+  waypointMarkers.push(destMarker);
+  waypoints.push(preview.end);
+
+  // close preview visuals/panel first
+  const endLL = preview.end;
+  clearPreview();
+
+  // create real route (this builds boxes, speech, eco, etc.)
+  createRoute(waypoints[waypoints.length - 2], endLL, colors[routes.length % colors.length], destMarker);
+
+  // keep autoFollow behavior as you already set elsewhere
+});
+
+// Cancel -> remove preview completely
+approvalCancelBtn.addEventListener("click", () => {
+  clearPreview();
+});
 
 /* ===== Road Type Detection (FIXED for Global Use) ===== */
 async function getRoadType(latlng) {
@@ -247,7 +428,23 @@ function ecoAdvisor(dist, elev, turnText) {
     return { speed, gear, throttle, tip, roadType };
 }
 
-
+/* ===== Speech Visibility Failsafe ===== */
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        // When user returns to tab / unlocks phone / screen on
+        if (speechSynthesis.paused || !speechSynthesis.speaking) {
+            try { speechSynthesis.resume(); } catch {}
+        }
+    }
+});
+/* ===== Speech Watchdog (Every 3s) ===== */
+setInterval(() => {
+    if (document.visibilityState === "visible") {
+        if (!speechSynthesis.speaking && speechSynthesis.paused) {
+            try { speechSynthesis.resume(); } catch {}
+        }
+    }
+}, 3000);
 
 /* ===== Driver Behavior Monitoring (Unchanged) ===== */
 let driverStats = { overspeed: 0, harshAccel: 0, totalPoints: 0 };
@@ -336,7 +533,7 @@ async function getUpcomingSteps(latlng, maxSteps=5){
     let nearestIdx=-1, minDist=Infinity;
     r.steps.forEach((s,i)=>{
       const d=latlng.distanceTo([s.lat,s.lng]);
-      if(d<minDist){ minDist=d; nearestIdx=i; }
+      if(d<minDist){ minDist=d; nearestIdx=i; } 
     });
     if(nearestIdx!==-1){
       for(let j=nearestIdx; j<Math.min(r.steps.length, nearestIdx+maxSteps); j++){
@@ -362,6 +559,19 @@ async function adaptiveAIDashboard(latlng, heading) {
  
   // 2. Calculate Eco Advice (Always based on real-time data)
   const eco = dynamicEcoAdvisor(currentSpeed, slope, 800); // Use 800m lookahead distance for general advice
+  // 👇 While preview is open:
+  if (preview.active) {
+    // Keep driver behavior & dashboard numbers updating
+    const eco = dynamicEcoAdvisor(currentSpeed, slope, 800);
+    updateDriverBehavior(currentSpeed, eco);
+    overspeedWarning(currentSpeed, eco.speed);
+    document.getElementById("speed").textContent = eco.speed + " km/h";
+    document.getElementById("gear").textContent = eco.gear;
+    document.getElementById("throttle").textContent = eco.throttle + "%";
+
+    // IMPORTANT: do NOT touch ai-tip here (no nav eco tips / no speech)
+    return; // ← skip the routing guidance part below
+  }
  
   // 3. Route Guidance Logic
   if (routes.length && activeRouteIndex !== null) {
@@ -418,15 +628,43 @@ async function adaptiveAIDashboard(latlng, heading) {
             if (step.element) step.element.remove();
             if (step.lineLayer) route.group.removeLayer(step.lineLayer);
             if (step.connectorLine) route.group.removeLayer(step.connectorLine);
+            if (step.nextConnector) route.group.removeLayer(step.nextConnector);
             // Also remove the connecting line to next step (if any)
             if (step.connectorLine) route.group.removeLayer(step.connectorLine);
             currentStepIndex++; // Advance step
             nextStepReady = true; // UNLOCK
             // If the route is finished, this will be handled in the next GPS loop
-            if (currentStepIndex >= steps.length) {
-                activeRouteIndex = null;
-                currentStepIndex = 0;
-                document.getElementById("ai-tip").textContent = "Destination reached ✅";
+            if (currentStepIndex >= steps.length) {
+                // Remove route box
+                const finishedIndex = route.routeIndex;
+                const finishedBox = document.getElementById(`route-box-${finishedIndex}`);
+                if (finishedBox) finishedBox.remove();
+
+                // Remove visuals
+                try { map.removeControl(route.rc); } catch {}
+                try { map.removeLayer(route.group); } catch {}
+
+                // Remove from array
+                routes = routes.filter(r => r.routeIndex !== finishedIndex);
+
+                // Rebuild route numbering & chain
+                rebuildRoutes();
+
+                // ✅ Auto-activate next route (if any)
+                if (routes.length > 0) {
+                    activeRouteIndex = 0;
+                    currentStepIndex = 0;
+                    nextStepReady = true;
+                    document.getElementById("ai-tip").textContent = "Starting next route...";
+                    
+                    setTimeout(() => {
+                        try { speakCurrentStep(); } catch {}
+                    }, 300);
+                } else {
+                    activeRouteIndex = null;
+                    currentStepIndex = 0;
+                    document.getElementById("ai-tip").textContent = "All routes completed ✅";
+                }
             }
           };
           
@@ -459,6 +697,7 @@ async function adaptiveAIDashboard(latlng, heading) {
           document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`;
           lastStepLatLng = latlng;                 // Save position when step starts
           lastStepAdvanceTime = Date.now();        // Reset step timer
+          try { speechSynthesis.resume(); } catch {}
           speechSynthesis.speak(stepMsg);
 
         } else {
@@ -467,6 +706,7 @@ async function adaptiveAIDashboard(latlng, heading) {
             // Remove current step visuals
             if (step.element) step.element.remove();
             if (step.lineLayer) route.group.removeLayer(step.lineLayer);
+            if (step.connectorLine) route.group.removeLayer(step.connectorLine);
             // Also remove the connecting line to next step (if any)
             if (step.connectorLine) route.group.removeLayer(step.connectorLine);
             currentStepIndex++;
@@ -546,7 +786,7 @@ async function predictElevationAhead(latlng,heading){
 if(navigator.geolocation){
     navigator.geolocation.watchPosition(async pos=>{
         const latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
-        const currentSpeed = calculateGPSSpeed(latlng); // Calculate speed for stability check
+        const currentSpeed = calculateGPSSpeed(latlng); // Calculate speed for stability 
     
         // FIX: Only use heading if available and speed is above a minimum threshold (~5 km/h)
         let heading = pos.coords.heading;
@@ -575,12 +815,17 @@ if(navigator.geolocation){
             map.setView(latlng,22); // Centers map on user's actual location
         } else {
             userMarker.setLatLng(latlng);
+            lockCarToCenter();   // ✅ keeps car locked to center
         }
         // 🧭 Auto-follow logic: Keep car centered only if user hasn’t manually moved
         if (autoFollow) {
-            map.panTo(latlng, { animate: true });
+          map.flyTo(latlng, map.getZoom(), {
+            animate: true,
+            duration: 0.7,    // smooth easing
+            easeLinearity: 0.2
+          });
         }
-                
+                        
         // ROTATE THE CAR SVG (The core fix for direction)
         const carEl = document.getElementById('user-car-svg');
         if (carEl) {
@@ -609,157 +854,213 @@ async function updateDriverCountry(latlng) {
   }
 }
 /* ===== Off-route adaptation (Unchanged) ===== */
-async function checkOffRoute(latlng){
-    if(routes.length){
-        const nearestRoute=routes[0];
-        let minDist=Infinity;
-        nearestRoute.steps.forEach(s=>{ const d=latlng.distanceTo([s.lat,s.lng]); if(d<minDist) minDist=d; });
-        if(minDist>30){
-            console.log("Off-route detected — recalculating");
-            if(waypoints.length>=1){
-                const lastWaypoint=waypoints[waypoints.length-1];
-                // Recalculate from current position to the destination
-                createRoute(latlng,lastWaypoint,colors[routes.length%colors.length], null, activeRouteIndex);
-            }
-        }
-    }
+async function checkOffRoute(latlng) {
+    if (!routes.length) return;
+
+    const active = routes[activeRouteIndex ?? 0];
+    if (!active || !active.steps) return;
+
+    let minDist = Infinity;
+    active.steps.forEach(s => {
+        const d = latlng.distanceTo([s.lat, s.lng]);
+        if (d < minDist) minDist = d;
+    });
+
+    // ✅ Only update existing route, DO NOT create a new one
+    if (minDist > 30) {
+        console.log("Off-route → updating start point");
+
+        if (active.rc && active.rc.getWaypoints) {
+            const wps = active.rc.getWaypoints();
+            wps[0].latLng = latlng;  
+            active.rc.setWaypoints(wps);  
+        }
+    }
+}
+
+
+/* === English Name Translator (Nominatim Reverse Lookup) === */
+async function getEnglishName(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1&accept-language=en`;
+    const res = await fetch(url, { cache: "no-store" });
+    const data = await res.json();
+    // Prefer explicit road name, fallback to display_name
+    return data.address?.road || data.display_name || "";
+  } catch (err) {
+    console.warn("English name lookup failed:", err);
+    return "";
+  }
 }
 
 /* ===== Route creation & step-box integration (MODIFIED: Deletion Logic) ===== */
 async function createRoute(start, end, color, marker = null, index = null) {
-    // Determine the 0-based index for the internal array and 1-based index for display/ID
-    const routeIndex = index !== null ? index : routes.length; 
-    const displayIndex = index !== null ? index + 1 : routes.length + 1; 
+    const routeIndex = index !== null ? index : routes.length;
+    const displayIndex = routeIndex + 1;
+    const endKey = `${end.lat.toFixed(6)},${end.lng.toFixed(6)}`;
 
-    // Check for duplicate destination
-    const endKey = `${end.lat.toFixed(6)},${end.lng.toFixed(6)}`;
-    const existing = routes.find(r => r.endKey === endKey);
-    if (existing) return; 
-    const routeColor = color || colors[(routeIndex) % colors.length];
+    // ✅ prevent duplicate routes to same destination
+    const exists = routes.find(r => r.endKey === endKey);
+    if (exists) return;
 
-    const rc = L.Routing.control({
-        waypoints: [start, end],
-        router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-        show: false, addWaypoints: false, createMarker: () => null,
-        lineOptions: { styles: [{ color: routeColor, weight: 5, opacity: 0.9 }] }
-    }).addTo(map);
-    const group = L.layerGroup().addTo(map);
-// Hide the small Leaflet routing summary box completely 👇
-    document.querySelectorAll('.leaflet-routing-container').forEach(el => el.style.display = 'none');
+    const routeColor = color || colors[routeIndex % colors.length];
 
-    // Route box
-    const box = document.createElement('div'); box.className = 'route-box';
-    const header = document.createElement('div'); header.className = 'route-header';
-    header.style.background = routeColor;
-    header.innerHTML = `<b>Route ${displayIndex}</b> <span id="route-distance-${routeIndex}" style="font-weight:normal;">Calculating...</span>
-        <button style="background:#ff4c4c;border:none;color:#fff;border-radius:50%;width:22px;height:22px;">✕</button>`;
-    const content = document.createElement('div'); content.className = 'route-content';
-    content.style.display = 'block'; box.appendChild(header); box.appendChild(content);
-    document.getElementById('routePanel').appendChild(box);
-    header.onclick = () => content.style.display = content.style.display === 'block' ? 'none' : 'block';
-    
-    // FIXED: Deletion Logic
-    header.querySelector('button').onclick = (e) => {
-        e.stopPropagation();
-        const idx = routes.findIndex(r => r.rc === rc); 
-        if (idx !== -1) {
-            // 1. If active route deleted, stop voice and reset state
-            if (activeRouteIndex === idx) {
-                if (speechSynthesis.speaking) { speechSynthesis.cancel(); } // STOP VOICE IMMEDIATELY
-                activeRouteIndex = null;
-                currentStepIndex = 0;
-            }
+    // ✅ remove old rc/group if this index is being reused
+    const old = routes.find(r => r.routeIndex === routeIndex);
+    if (old) {
+        try { map.removeControl(old.rc); } catch {}
+        try { map.removeLayer(old.group); } catch {}
+    }
 
-            // 2. Remove route and markers
-            map.removeControl(rc); map.removeLayer(group); box.remove();
-            routes.splice(idx, 1);
-        }
-        if (marker) {
-            const wpIdx = waypointMarkers.indexOf(marker);  
-            if (wpIdx !== -1) { map.removeLayer(marker); waypointMarkers.splice(wpIdx, 1); waypoints.splice(wpIdx + 1, 1); }
-        }
-        
-        // 3. Rebuild and check for auto-start on next available route
-        rebuildRoutes();
-        
-        // 4. Auto-start next route if one exists and was active
-        if (activeRouteIndex === null && routes.length > 0) {
-            routes.forEach((r, i) => r.routeIndex = i); // Re-index routes
-            activeRouteIndex = 0; // Set the first route in the new array as active
+    const rc = L.Routing.control({
+        waypoints: [start, end],
+        router: L.Routing.osrmv1({ serviceUrl: "https://router.project-osrm.org/route/v1" }),
+        show: false,
+        addWaypoints: false,
+        createMarker: () => null,
+        lineOptions: { styles: [{ color: routeColor, weight: 5, opacity: 0.9 }] }
+    }).addTo(map);
+
+    const group = L.layerGroup().addTo(map);
+    document.querySelectorAll(".leaflet-routing-container").forEach(el => el.style.display = "none");
+
+    // ✅ BOX HANDLING (re-use or create)
+    let box = document.getElementById(`route-box-${routeIndex}`);
+    let header, content;
+
+    if (!box) {
+        box = document.createElement("div");
+        box.className = "route-box";
+        box.id = `route-box-${routeIndex}`;
+
+        header = document.createElement("div");
+        content = document.createElement("div");
+        content.className = "route-content";
+        content.style.display = "block";
+
+        box.appendChild(header);
+        box.appendChild(content);
+        document.getElementById("routePanel").appendChild(box);
+    } else {
+        header = box.querySelector(".route-header");
+        content = box.querySelector(".route-content");
+    }
+
+    // ✅ update header
+    header.className = "route-header";
+    header.style.background = routeColor;
+    header.innerHTML = `
+        <b>Route ${displayIndex}</b>
+        <span id="route-distance-${routeIndex}" style="font-weight:normal;">Calculating...</span>
+        <button class="route-delete" style="background:#ff4c4c;border:none;color:#fff;border-radius:50%;width:22px;height:22px;">✕</button>
+    `;
+    header.onclick = () => content.style.display = content.style.display === "block" ? "none" : "block";
+
+    // ✅ delete route handler
+    header.querySelector("button").onclick = () => {
+        // Stop speech immediately
+        try { speechSynthesis.cancel(); } catch {}
+
+        // Remove route visuals
+        try { map.removeControl(rc); } catch {}
+        try { map.removeLayer(group); } catch {}
+
+        // Remove waypoint marker
+        if (marker) {
+            const mIndex = waypointMarkers.indexOf(marker);
+            if (mIndex !== -1) {
+                map.removeLayer(marker);
+                waypointMarkers.splice(mIndex, 1);
+                waypoints.splice(mIndex + 1, 1);
+            }
+        }
+
+        // Remove box
+        box.remove();
+
+        // Remove from route array
+        routes = routes.filter(r => r.routeIndex !== routeIndex);
+
+        // Rebuild the chain
+        rebuildRoutes();
+
+        // ✅ NEW: Immediately activate the next available route
+        if (routes.length > 0) {
+            activeRouteIndex = 0;
             currentStepIndex = 0;
             nextStepReady = true;
-            speakCurrentStep(); // Start voice guidance for the new active route
-        } else if (routes.length === 0) {
-            document.getElementById('ai-tip').textContent = 'Drive smoothly';
-        }
-    };
 
-    rc.on('routesfound', async e => {
-        const route = e.routes[0];
-        const coords = route.coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
-        const elevs = await getElevations(coords);
-        const steps = [];
-        content.innerHTML = '';
-        route.instructions.forEach((s, j) => {
-            const idxStart = s.index;
-            const idxEnd = j + 1 < route.instructions.length ? route.instructions[j + 1].index : coords.length;
-            const segmentCoords = coords.slice(idxStart, idxEnd).map(c => [c.lat, c.lng]);
-            const elev = elevs[idxStart] || 0;
-            // Draw connected path segments (each connecting to next step)
-            const stepLine = L.polyline(segmentCoords, { color: routeColor, weight: 5, opacity: 0.8 }).addTo(group);
-
-            // Store connection info for dynamic removal
-            if (j > 0) {
-                // Connect previous step line with this one
-                const prevStep = steps[j - 1];
-                if (prevStep && prevStep.lineLayer) {
-                    const lastLat = prevStep.lineLayer.getLatLngs().slice(-1)[0];
-                    const newLat = segmentCoords[0];
-                    const connector = L.polyline([lastLat, newLat], { color: routeColor, weight: 3, opacity: 0.6 }).addTo(group);
-                    prevStep.connectorLine = connector; // save link line
-                }
-            }
-            const eco = ecoAdvisor(s.distance, elev, s.text);
-            const item = document.createElement('div');
-            item.className = 'route-step';
-            item.innerHTML = `<b>${s.text}</b><div>${(s.distance / 1000).toFixed(2)} km | Elev ${elev.toFixed(1)} m`;
-            content.appendChild(item);
-            item.addEventListener('mouseenter', () => stepLine.setStyle({ color: '#00FF00', weight: 6, opacity: 0.9 }));
-            item.addEventListener('mouseleave', () => stepLine.setStyle({ color: routeColor, weight: 5, opacity: 0.5 }));
-            steps.push({ 
-                lat: coords[idxStart].lat, 
-                lng: coords[idxStart].lng, 
-                text: s.text, 
-                elev, 
-                element: item, // DOM element for removal
-                distance: s.distance, // Distance for remaining distance calc
-                lineLayer: stepLine // Leaflet layer for removal
-            });
-        });
-        // If this is a re-route, find the existing slot and replace/update
-        let currentRouteSlot = routes.find(r => r.routeIndex === routeIndex);
-        if (currentRouteSlot) {
-             currentRouteSlot.rc = rc; 
-             currentRouteSlot.group = group; 
-             currentRouteSlot.steps = steps; 
-             currentRouteSlot.totalDistance = route.summary.totalDistance;
+            // Speak first step of new route instantly
+            setTimeout(() => {
+                try { speakCurrentStep(); } catch {}
+            }, 300);
         } else {
-            // New route, push it to the array
-            routes.push({ rc, group, steps, color: routeColor, endKey, totalDistance: route.summary.totalDistance, routeIndex: routeIndex });
+            activeRouteIndex = null;
+            currentStepIndex = 0;
+            document.getElementById("ai-tip").textContent = "No active route";
         }
-        
-        const totalRouteDistance = route.summary.totalDistance;
-        document.getElementById(`route-distance-${routeIndex}`).textContent = `${(totalRouteDistance / 1000).toFixed(1)} km total`;
-        
-        // Set as active route if no other route is in progress
-        if (activeRouteIndex === null) {
-            activeRouteIndex = routeIndex;
-            currentStepIndex = 0;
-            speakCurrentStep(); // Speak the first step immediately
-        }
-    });
-}
+    };
 
+
+    // ✅ when OSRM returns steps
+    rc.on("routesfound", async e => {
+        const r = e.routes[0];
+        const coords = r.coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
+        const elevs = await getElevations(coords);
+
+        content.innerHTML = "";
+        const steps = [];
+
+        r.instructions.forEach((s, i) => {
+            const idxStart = s.index;
+            const idxEnd = r.instructions[i + 1] ? r.instructions[i + 1].index : coords.length;
+
+            const seg = coords.slice(idxStart, idxEnd).map(c => [c.lat, c.lng]);
+            const elev = elevs[idxStart] || 0;
+
+            const line = L.polyline(seg, { color: routeColor, weight: 5, opacity: 0.8 }).addTo(group);
+
+            const div = document.createElement("div");
+            div.className = "route-step";
+            div.innerHTML = `<b>${s.text}</b><div>${(s.distance / 1000).toFixed(2)} km | Elev ${elev.toFixed(1)} m`;
+            content.appendChild(div);
+
+            steps.push({
+                lat: coords[idxStart].lat,
+                lng: coords[idxStart].lng,
+                text: s.text,
+                elev,
+                distance: s.distance,
+                element: div,
+                lineLayer: line
+            });
+        });
+
+        // ✅ update or push to routes array
+        const existing = routes.find(r => r.routeIndex === routeIndex);
+        if (existing) {
+            existing.rc = rc;
+            existing.group = group;
+            existing.steps = steps;
+            existing.endKey = endKey;
+            existing.totalDistance = r.summary.totalDistance;
+        } else {
+            routes.push({
+                rc, group, steps, endKey,
+                routeIndex, totalDistance: r.summary.totalDistance
+            });
+        }
+
+        document.getElementById(`route-distance-${routeIndex}`).textContent =
+            `${(r.summary.totalDistance / 1000).toFixed(1)} km total`;
+
+        if (activeRouteIndex === null) {
+            activeRouteIndex = routeIndex;
+            currentStepIndex = 0;
+            speakCurrentStep();
+        }
+    });
+}
 
 /*================Multi-step AI Tip Blending + Voice (FIXED)=============*/
 function speakCurrentStep() {
@@ -802,6 +1103,7 @@ function speakCurrentStep() {
 
     // Start the speech chain and update tip box to Step Instruction
     document.getElementById("ai-tip").textContent = `Step ${currentStepIndex + 1}: ${step.text}`; 
+    try { speechSynthesis.resume(); } catch {}
     speechSynthesis.speak(stepMsg);
   } else {
     document.getElementById("ai-tip").textContent = `Tip: ${eco.tip}`;
@@ -809,32 +1111,77 @@ function speakCurrentStep() {
 }
 
 /* ===== Add waypoint on map click (Unchanged) ===== */
-map.on('click',e=>{
-    const latlng=e.latlng; waypoints.push(latlng);
-    const marker=L.marker(latlng).addTo(map); waypointMarkers.push(marker);
-    if(waypoints.length>=2) createRoute(waypoints[waypoints.length-2],latlng,colors[routes.length%colors.length],marker);
+map.on('click', async e => {
+    const latlng = e.latlng;
+
+    // ✅ 1. Decide start point for preview
+    let startPoint = null;
+
+    // If any active route exists → start from last step of the LAST route
+    if (routes.length > 0) {
+        const lastRoute = routes[routes.length - 1];
+        const lastSteps = lastRoute.steps;
+        if (lastSteps.length > 0) {
+            const lastStep = lastSteps[lastSteps.length - 1];
+            startPoint = L.latLng(lastStep.lat, lastStep.lng);
+        }
+    }
+
+    // If no routes → start from driver
+    if (!startPoint) {
+        startPoint = userMarker ? userMarker.getLatLng() : map.getCenter();
+    }
+
+    // ✅ 2. Build preview WITHOUT pushing to waypoints
+    openPreviewTo(latlng, "Pinned location", true);
+    preview.start = startPoint;   // Override preview start properly
 });
 
-/* ===== Rebuild Routes (MODIFIED: to re-index and ensure no duplicates) ===== */
-function rebuildRoutes(){
-    const currentWaypoints = [waypoints[0], ...waypoints.slice(1)];
-    const markers = [...waypointMarkers];
 
-    routes.forEach(r=>{ map.removeControl(r.rc); map.removeLayer(r.group); });
-    routes=[]; document.getElementById('routePanel').innerHTML='';
-    
-    if(currentWaypoints.length<2) return;
-    
-    // Create new routes with correct indexing
-    for(let i=1;i<currentWaypoints.length;i++){ 
-        // Need to pass the original marker associated with the *destination* waypoint
-        // Note: waypointMarkers[i-1] is the marker for waypoints[i]
-        const destinationMarker = i - 1 < markers.length ? markers[i-1] : null; 
-        // Pass a unique index for correct route management
-        createRoute(currentWaypoints[i-1],currentWaypoints[i],colors[(i-1)%colors.length], destinationMarker, i - 1); 
+/* ===== Rebuild Routes (MODIFIED: to re-index and ensure no duplicates) ===== */
+function rebuildRoutes() {
+    // ✅ Always start from driver
+    const driver = userMarker ? userMarker.getLatLng() : map.getCenter();
+
+    const validWaypoints = [driver];
+    const validMarkers = [];
+
+    // ✅ keep only markers still on map
+    waypointMarkers.forEach((m, i) => {
+        if (map.hasLayer(m)) {
+            validWaypoints.push(m.getLatLng());
+            validMarkers.push(m);
+        }
+    });
+
+    // ✅ reset arrays
+    waypoints.length = 0;
+    waypointMarkers.length = 0;
+    waypoints.push(...validWaypoints);
+    waypointMarkers.push(...validMarkers);
+
+    // ✅ remove old routes
+    routes.forEach(r => {
+        try { map.removeControl(r.rc); } catch {}
+        try { map.removeLayer(r.group); } catch {}
+    });
+    routes = [];
+    document.getElementById("routePanel").innerHTML = "";
+
+    // ✅ no chain if only one point
+    if (waypoints.length < 2) return;
+
+    // ✅ rebuild properly: Driver → WP1 → WP2 → …
+    for (let i = 1; i < waypoints.length; i++) {
+        createRoute(
+            waypoints[i - 1],
+            waypoints[i],
+            colors[(i - 1) % colors.length],
+            waypointMarkers[i - 1],
+            i - 1
+        );
     }
 }
-
 
 /* ===== Map Toggle (Unchanged) ===== */
 let mapFull=false;
@@ -868,6 +1215,59 @@ locateBtn.addEventListener("click", () => {
 
   const userPos = userMarker.getLatLng();
   map.setView(userPos, 19, { animate: true });
+  // ✅ Always keep car at exact center like Google Maps
+  // === Route de-duplication + center-lock helpers ===
+  function lockCarToCenter() {
+    if (!userMarker) return;
+    if (autoFollow) {
+      const pos = userMarker.getLatLng();
+      map.setView(pos, map.getZoom(), { animate: false });
+    }
+  }
+
+  // Keep one UI box per routeIndex, and map an endKey to the chosen routeIndex.
+  // This prevents duplicate boxes and repeated boxes for the same destination.
+  const routeBoxByIndex = new Map();     // routeIndex -> { box, header, content }
+  const routeIndexByEndKey = new Map();  // endKey     -> routeIndex
+
+  function getOrCreateRouteBox(routeIndex, displayIndex, routeColor, endKey) {
+    let ui = routeBoxByIndex.get(routeIndex);
+    if (!ui) {
+      const box = document.createElement('div');
+      box.className = 'route-box';
+      box.id = `route-box-${routeIndex}`;
+      box.dataset.endkey = endKey;
+
+      const header = document.createElement('div');
+      header.className = 'route-header';
+
+      const content = document.createElement('div');
+      content.className = 'route-content';
+      content.style.display = 'block';
+
+      box.appendChild(header);
+      box.appendChild(content);
+      document.getElementById('routePanel').appendChild(box);
+
+      ui = { box, header, content };
+      routeBoxByIndex.set(routeIndex, ui);
+    }
+
+    // (Re)paint header consistently
+    ui.header.style.background = routeColor;
+    ui.header.innerHTML = `
+      <b>Route ${displayIndex}</b>
+      <span id="route-distance-${routeIndex}" style="font-weight:normal;">Calculating...</span>
+      <button class="route-delete" style="background:#ff4c4c;border:none;color:#fff;border-radius:50%;width:22px;height:22px;">✕</button>
+    `;
+    ui.header.onclick = () => {
+      ui.content.style.display = ui.content.style.display === 'block' ? 'none' : 'block';
+    };
+
+    ui.box.dataset.endkey = endKey;
+    routeIndexByEndKey.set(endKey, routeIndex);
+    return ui;
+  }
 
   // Button feedback animation
   locateBtn.style.transform = "scale(0.9)";
@@ -963,13 +1363,13 @@ function selectResult(i) {
   const f = results[i];
   if (!f) return;
   const latlng = L.latLng(f.lat, f.lon);
-  waypoints.push(latlng);
-  const marker = L.marker(latlng).addTo(map);
-  waypointMarkers.push(marker);
-  if (waypoints.length >= 2)
-    createRoute(waypoints[waypoints.length - 2], latlng, colors[routes.length % colors.length]);
+  // ✅ 1. Build PREVIEW route instead of creating final route
+  openPreviewTo(latlng, f.name, true);
+  // ✅ 2. Do NOT push waypoint immediately (wait until Start button)
   input.value = "";
   suggestBox.style.display = "none";
+  // ✅ 3. Smooth camera movement to preview destination
+  map.flyTo(latlng, 16, { animate: true, duration: 1.2 });
 }
 
 const micBtn = document.getElementById('micBtn');
