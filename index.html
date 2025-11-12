@@ -135,6 +135,15 @@ align-items:center;color:#fff;font-size:0.9rem;}
   font-size:0.78rem; padding:5px 8px; border-radius:8px;
   background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12);
 }
+.leaflet-popup-content-wrapper {
+  background: rgba(25, 30, 45, 0.95);
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+.leaflet-popup-tip {
+  background: rgba(25, 30, 45, 0.95);
+}
 
 </style>
 </head>
@@ -347,20 +356,42 @@ function buildPreviewRoute(startLL, endLL, labelText){
   });
 }
 
-function openPreviewTo(latlng, label, addTempMarker = true){
+async function openPreviewTo(latlng, label, addTempMarker = true) {
   const start = userMarker ? userMarker.getLatLng() : map.getCenter();
-  if (addTempMarker){
-    if (preview.tempMarker) { try { map.removeLayer(preview.tempMarker); } catch {} }
-    preview.tempMarker = L.marker(latlng).addTo(map);
+  // 🆕 Get human-readable address (reverse geocode)
+  let placeName = label;
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`);
+    const data = await res.json();
+    if (data && data.display_name) placeName = data.display_name.split(",").slice(0, 3).join(", ");
+  } catch (err) {
+    console.warn("Reverse geocode failed:", err);
   }
-  buildPreviewRoute(start, latlng, label);
+  // 🆕 Add popup marker for destination
+  if (addTempMarker) {
+    if (preview.tempMarker) { try { map.removeLayer(preview.tempMarker); } catch {} }
+    preview.tempMarker = L.marker(latlng)
+      .bindPopup(`<b>Destination:</b><br>${placeName}`)
+      .addTo(map)
+      .openPopup();
+  }
+  // 🆕 Voice + tip confirmation
+  const destinationText = `Destination set to ${placeName}`;
+  speak(destinationText, "step", { interrupt: true });
+  aiBoxShow("step", destinationText);
+  buildPreviewRoute(start, latlng, placeName);
 }
 
 approvalStartBtn.addEventListener("click", () => {
   if (!preview.active || !preview.end) return;
   const start = userMarker ? userMarker.getLatLng() : map.getCenter();
   if (!waypoints.length) waypoints.push(start); else waypoints[0] = start;
-  const destMarker = L.marker(preview.end).addTo(map);
+  // 🆕 Add popup marker for confirmed destination
+  const destMarker = L.marker(preview.end)
+    .bindPopup(`<b>Destination Confirmed:</b><br>${preview.destLabel}`)
+    .addTo(map)
+    .openPopup();
+  // 🆕 Speak confirmation again once approved
   waypointMarkers.push(destMarker); waypoints.push(preview.end);
   const endLL = preview.end; clearPreview();
   createRoute(waypoints[waypoints.length - 2], endLL, colors[routes.length % colors.length], destMarker);
