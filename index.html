@@ -401,14 +401,21 @@ function ecoAdvisor(distAhead, slope){
   if (distAhead > 700 && Math.abs(slope) < 3) tip += " Long straight ahead.";
   return { speed, gear, throttle, tip, slope };
 }
+// ===== Elevation Fix + Directional Arrows + Turn Signals =====
+async function getElevations(coords) {
+  try {
+    const locations = coords.map(c => `${c.lat},${c.lng}`).join("|");
+    const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${locations}`);
+    const data = await res.json();
+    return data.results.map(r => r.elevation || 0);
+  } catch (err) {
+    console.warn("Elevation fetch failed:", err);
+    return new Array(coords.length).fill(0);
+  }
+}
 
 const ELEVATION_INTERVAL = 50;
 const LOOKAHEAD_DISTANCE = 200;
-async function getElevations(coords){
-  try {
-    return new Array(coords.length).fill(0).map((_, i) => Math.sin(i * 0.1) * 50 + Math.random() * 5);
-  } catch { return new Array(coords.length).fill(0); }
-}
 async function predictElevationAhead(latlng, heading){
   const R=6378137; const pts=[];
   for(let d=ELEVATION_INTERVAL; d<=LOOKAHEAD_DISTANCE; d+=ELEVATION_INTERVAL){
@@ -438,7 +445,7 @@ function maybeSpeakEco(eco) {
   SPEECH.lastSlopeBucket = bucket;
   const periodicDue = (t - SPEECH.lastEcoSpokenAt) > SPEECH.ECO_PERIODIC;
   const tipText = `Road type: ${currentRoadType}. ${bucket === "uphill" ? "Uphill ahead." : bucket === "downhill" ? "Downhill ahead." : "Level road."} ` +
-                  `Recommended ${eco.speed}.`;
+                  `Recommended ${eco.speed} kilometer per hour.`;
 
   SPEECH.lastEcoText = tipText;
   SPEECH.lastRoadType = currentRoadType;
@@ -611,6 +618,30 @@ function cleanupRoute(route) {
   rebuildRoutes();
   refreshAIBox();
 }
+// 🆕 REPEAT CURRENT STEP INSTRUCTION (like eco tips)
+// Prevents silent period during long steps
+function maybeRepeatCurrentStep() {
+  if (activeRouteIndex === null || !routes[activeRouteIndex]) return;
+  const now = nowMs();
+  const route = routes[activeRouteIndex];
+  const steps = route.steps;
+  if (currentStepIndex >= steps.length) return;
+  const step = steps[currentStepIndex];
+  // Skip if warning active
+  if (now < SPEECH.warningActiveUntil) return;
+  // Speak again every 25s (configurable)
+  const repeatInterval = 60000;
+  const sinceLast = now - SPEECH.lastStepSpokenAt;
+  
+  if (sinceLast > repeatInterval) {
+    const distText =
+      step.distance < 1000
+        ? `${step.distance.toFixed(0)} meters`
+        : `${(step.distance / 1000).toFixed(1)} kilometers`;
+    const reminder = `Reminder: ${step.text}. Proceed for ${distText}.`;
+    speak(reminder, "step", { interrupt: false });
+  }
+}
 
 // ===== Main AI loop =====
 async function adaptiveAIDashboard(latlng, heading) {
@@ -646,6 +677,7 @@ async function adaptiveAIDashboard(latlng, heading) {
 
   checkWarnings(currentSpeed, eco);
   maybeSpeakEco(eco);
+  maybeRepeatCurrentStep(); // 🆕 remind current step periodically
 }
 
 // ===== GPS watch =====
@@ -815,6 +847,16 @@ async function createRoute(start, end, color, marker = null, index = null) {
         expectedHeading: s.heading || 0
       });
     });
+    // helper to get arrow icon from instruction text
+    function getTurnIcon(text) {
+      text = text.toLowerCase();
+      if (text.includes("left")) return "⬅️";
+      if (text.includes("right")) return "➡️";
+      if (text.includes("straight")) return "⬆️";
+      if (text.includes("u-turn")) return "↩️";
+      if (text.includes("roundabout")) return "🌀";
+      return "⬆️";
+    }
 
     const existing = routes.find(x => x.routeIndex === routeIndex);
     if (existing) { 
