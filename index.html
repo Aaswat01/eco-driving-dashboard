@@ -611,6 +611,8 @@ align-items:center;color:#fff;font-size:0.9rem;}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-rotate-map@0.1.5/dist/leaflet-rotate-map.css" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate-map@0.1.5/dist/leaflet-rotate-map.min.js"></script>
 <script>
 
 // ==============================
@@ -621,30 +623,15 @@ let autoRotation = true;
 let lastHeading = 0;      // stores bearing (0 = north-up)
 let userManualRotation = 0;
 
-function rotateMap(bearingDeg, fromUserGesture = false) {
-  // bearingDeg = direction of travel / desired direction up
-  if (!autoRotation && !fromUserGesture) return;
+function rotateMap(bearingDeg) {
+    if (!autoRotation) return;
 
-  lastHeading = bearingDeg;
-
-  // Map must rotate opposite to make bearing point "up"
-  const angle = -bearingDeg;
-
-  const mapPane = map.getPane("mapPane");
-  const markerPane = map.getPane("markerPane");
-  const controlPane = map.getPane("controlPane");
-
-  if (!mapPane) return;
-
-  mapPane.style.transform = `rotate(${angle}deg)`;
-  mapPane.style.transformOrigin = "center center";
-
-  // Keep markers + controls upright
-  if (markerPane) markerPane.style.transform = `rotate(${-angle}deg)`;
-  if (controlPane) controlPane.style.transform = `rotate(${-angle}deg)`;
+    lastHeading = bearingDeg;
+    map.setBearing(bearingDeg);
 }
 
-const map = L.map('map').setView([0, 0], 2);
+const map = L.map('map', {rotate: true,touchRotate: true,bearing: 0}).setView([0, 0], 2);
+
 let autoFollow = true;
 
 const englishMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -1508,10 +1495,7 @@ if (navigator.geolocation) {
       }
 
       // ✅ Rotate map based on heading when rotation is enabled
-      if (autoRotation) {
-        rotateMap(heading);
-      }
-
+      if (autoRotation) map.setBearing(heading);
       // Keep the car icon pointing "forward"
       const carEl = document.getElementById("user-car-svg");
       if (carEl) {
@@ -1528,17 +1512,14 @@ if (navigator.geolocation) {
   );
 }
 const compassBtn = document.getElementById("compassBtn");
-
 compassBtn.onclick = () => {
   autoRotation = !autoRotation;
 
   if (!autoRotation) {
-    // North-up
-    rotateMap(0, true);
+    map.setBearing(0); 
     compassBtn.classList.remove("active");
   } else {
-    // Back to last heading-up mode
-    rotateMap(lastHeading, true);
+    map.setBearing(lastHeading || 0);
     compassBtn.classList.add("active");
   }
 };
@@ -2531,50 +2512,38 @@ micBtn.onclick = async () => {
   } catch { alert('Please allow microphone permission to use voice search.'); }
 };
 let gestureStartAngle = null;
-let gestureStartHeading = 0;
+let startBearing = 0;
 
-map.on("touchstart", e => {
-  const evt = e.originalEvent || e;
-  if (!evt.touches || evt.touches.length !== 2) return;
+map.on("touchstart", evt => {
+  const t = evt.originalEvent.touches;
+  if (!t || t.length !== 2) return;
 
-  autoRotation = false;                  // manual rotation mode
+  autoRotation = false;
   compassBtn.classList.remove("active");
 
-  const [t1, t2] = evt.touches;
-  gestureStartAngle =
-    Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) *
-    (180 / Math.PI);
+  gestureStartAngle = Math.atan2(
+    t[1].clientY - t[0].clientY,
+    t[1].clientX - t[0].clientX
+  ) * (180 / Math.PI);
 
-  gestureStartHeading = lastHeading || 0;
+  startBearing = map.getBearing();
 });
 
-map.on("touchmove", e => {
-  const evt = e.originalEvent || e;
-  if (gestureStartAngle === null || !evt.touches || evt.touches.length !== 2)
-    return;
+map.on("touchmove", evt => {
+  const t = evt.originalEvent.touches;
+  if (!t || t.length !== 2 || gestureStartAngle === null) return;
 
-  const [t1, t2] = evt.touches;
-  const currentAngle =
-    Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) *
-    (180 / Math.PI);
+  const newAngle = Math.atan2(
+    t[1].clientY - t[0].clientY,
+    t[1].clientX - t[0].clientX
+  ) * (180 / Math.PI);
 
-  const delta = currentAngle - gestureStartAngle;
-
-  // new bearing = original heading + twist
-  const newHeading = gestureStartHeading + delta;
-  userManualRotation = newHeading;
-
-  rotateMap(newHeading, true);
+  map.setBearing(startBearing + (newAngle - gestureStartAngle));
 });
 
-map.on("touchend", e => {
-  const evt = e.originalEvent || e;
-  // when all fingers lifted, finish gesture
-  if (!evt.touches || evt.touches.length === 0) {
-    gestureStartAngle = null;
-  }
+map.on("touchend", () => {
+  gestureStartAngle = null;
 });
-
 
 </script>
 </body>
