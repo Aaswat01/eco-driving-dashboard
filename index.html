@@ -612,63 +612,36 @@ align-items:center;color:#fff;font-size:0.9rem;}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script>
-// ===== NATURAL VOICE ENGINE =====
-let naturalVoice = null;
-
-function loadVoice() {
-    const preferredVoices = [
-        "Google UK English Male",
-        "Google UK English Female",
-        "Google US English",
-        "Microsoft Susan",
-        "Microsoft Mark",
-        "Siri Voice",
-        "English (United States)"
-    ];
-
-    const availableVoices = speechSynthesis.getVoices();
-
-    // Choose best match in our priority list
-    naturalVoice = availableVoices.find(v => 
-        preferredVoices.some(pref => v.name.toLowerCase().includes(pref.toLowerCase()))
-    );
-
-    if (!naturalVoice) {
-        // fallback to the first English voice found
-        naturalVoice = availableVoices.find(v => v.lang.includes("en"));
-    }
-
-    console.log("🎤 Selected voice:", naturalVoice?.name || "Default engine");
-}
-
-speechSynthesis.onvoiceschanged = loadVoice;
 
 // ==============================
 // LOCATION-FIRST NAVIGATION SYSTEM
 // Priority: Driver's actual location > Pre-planned announcements
 // ==============================
-
 let autoRotation = true;
-let lastHeading = 0;
+let lastHeading = 0;      // stores bearing (0 = north-up)
 let userManualRotation = 0;
 
-function rotateMap(angle, fromUserGesture = false) {
-    if (!autoRotation && !fromUserGesture) return;
+function rotateMap(bearingDeg, fromUserGesture = false) {
+  // bearingDeg = direction of travel / desired direction up
+  if (!autoRotation && !fromUserGesture) return;
 
-    lastHeading = angle;
+  lastHeading = bearingDeg;
 
-    const mapPane = map.getPane('mapPane');
-    const markerPane = map.getPane('markerPane');
-    const controlPane = map.getPane('controlPane');
+  // Map must rotate opposite to make bearing point "up"
+  const angle = -bearingDeg;
 
-    if (!mapPane) return;
+  const mapPane = map.getPane("mapPane");
+  const markerPane = map.getPane("markerPane");
+  const controlPane = map.getPane("controlPane");
 
-    mapPane.style.transform = `rotate(${angle}deg)`;
-    mapPane.style.transformOrigin = "center center";
+  if (!mapPane) return;
 
-    // Keep controls and markers upright
-    if (markerPane) markerPane.style.transform = `rotate(${-angle}deg)`;
-    if (controlPane) controlPane.style.transform = `rotate(${-angle}deg)`;
+  mapPane.style.transform = `rotate(${angle}deg)`;
+  mapPane.style.transformOrigin = "center center";
+
+  // Keep markers + controls upright
+  if (markerPane) markerPane.style.transform = `rotate(${-angle}deg)`;
+  if (controlPane) controlPane.style.transform = `rotate(${-angle}deg)`;
 }
 
 const map = L.map('map').setView([0, 0], 2);
@@ -771,39 +744,27 @@ function aiBoxShow(kind, text) {
 }
 
 function speak(text, kind, { interrupt=false } = {}) {
-    try { if (interrupt) speechSynthesis.cancel(); } catch {}
+  try { if (interrupt) speechSynthesis.cancel(); } catch {}
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1; u.pitch = 1;
+  speechSynthesis.speak(u);
 
-    const u = new SpeechSynthesisUtterance(text);
-
-    // 🎤 Apply natural voice if available
-    if (naturalVoice) u.voice = naturalVoice;
-
-    // 🔊 Natural pacing
-    u.rate = 0.92;
-    u.pitch = 0.98;
-    u.volume = 1.0;
-
-    // Optional: smoother pauses between sentences
-    u.text = text.replace(/,/g, ", ...").replace(/\./g, ". ...");
-
-    speechSynthesis.speak(u);
-
-    if (kind === "warning") {
-        SPEECH.warningActiveUntil = nowMs() + SPEECH.WARNING_HOLD;
-        aiBoxShow("warning", text);
-        u.onend = () => {
-            SPEECH.warningActiveUntil = 0;
-            refreshAIBox();
-        };
-    } else if (kind === "step") {
-        SPEECH.lastStepText = text;
-        SPEECH.lastStepSpokenAt = nowMs();
-        aiBoxShow("step", text);
-    } else {
-        SPEECH.lastEcoText = text;
-        SPEECH.lastEcoSpokenAt = nowMs();
-        aiBoxShow("eco", text);
-    }
+  if (kind === "warning") {
+    SPEECH.warningActiveUntil = nowMs() + SPEECH.WARNING_HOLD;
+    aiBoxShow("warning", text);
+    u.onend = () => {
+      SPEECH.warningActiveUntil = 0;
+      refreshAIBox();
+    };
+  } else if (kind === "step") {
+    SPEECH.lastStepText = text;
+    SPEECH.lastStepSpokenAt = nowMs();
+    aiBoxShow("step", text);
+  } else {
+    SPEECH.lastEcoText = text;
+    SPEECH.lastEcoSpokenAt = nowMs();
+    aiBoxShow("eco", text);
+  }
 }
 
 function refreshAIBox() {
@@ -1004,31 +965,6 @@ function updateVirtualGPS(latlng) {
   updateSpeedLimit(latlng);
 }
 
-// Modify GPS watcher to detect permission denial
-if (navigator.geolocation) {
-  navigator.geolocation.watchPosition(
-    async pos => {
-      useVirtualGPS = false; // real GPS working
-      const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-      updateSpeedLimit(latlng);
-      adaptiveAIDashboard(latlng, pos.coords.heading || 0);
-
-      if (!userMarker) {
-        userMarker = L.marker(latlng, { icon: carIcon }).addTo(map);
-        map.setView(latlng, 18);
-      } else {
-        userMarker.setLatLng(latlng);
-      }
-    },
-    err => {
-      console.warn("GPS disabled, switching to virtual GPS.");
-      useVirtualGPS = true;
-    },
-    { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
-  );
-}
-
-// === Speed Limit (Overpass API - Real Data Only) ===
 // === Speed Limit (Overpass API - Real Data Only) ===
 let lastSpeedLimit = null;
 let lastSpeedLimitTime = 0;
@@ -1536,50 +1472,75 @@ async function adaptiveAIDashboard(latlng, heading) {
   maybeRepeatCurrentStep(); // 🆕 remind current step periodically
 }
 
-// ===== GPS watch =====
-if (navigator.geolocation){
-  navigator.geolocation.watchPosition(async pos=>{
-    const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-    updateSpeedLimit(latlng);
-    const currentSpeed = calculateGPSSpeed(latlng);
-    let heading = pos.coords.heading;
-    const MIN_SPEED_FOR_HEADING = 5/3.6;
-    if (heading == null || currentSpeed < MIN_SPEED_FOR_HEADING) {
-      const carEl = document.getElementById('user-car-svg');
+// ===== GPS watch (single, with auto-center + rotation) =====
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(
+    async pos => {
+      useVirtualGPS = false; // real GPS working again
+      const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+      updateSpeedLimit(latlng);
+
+      const currentSpeed = calculateGPSSpeed(latlng);
+      const MIN_SPEED_FOR_HEADING = 5 / 3.6;
+      let heading = pos.coords.heading;
+
+      // If heading is unavailable or too slow, reuse last heading
+      if (heading == null || currentSpeed < MIN_SPEED_FOR_HEADING) {
+        heading = lastHeading || 0;
+      }
+
+      // Keep first waypoint as "car position"
+      if (!waypoints.length) waypoints.push(latlng);
+      else waypoints[0] = latlng;
+
+      // Create / move user marker
+      if (!userMarker) {
+        userMarker = L.marker(latlng, { icon: carIcon }).addTo(map);
+        map.setView(latlng, 18);
+      } else {
+        userMarker.setLatLng(latlng);
+      }
+
+      // ✅ ALWAYS keep car in the center when autoFollow is ON
+      if (autoFollow) {
+        const zoom = map.getZoom() < 16 ? 18 : map.getZoom();
+        map.setView(latlng, zoom, { animate: true });
+      }
+
+      // ✅ Rotate map based on heading when rotation is enabled
+      if (autoRotation) {
+        rotateMap(heading);
+      }
+
+      // Keep the car icon pointing "forward"
+      const carEl = document.getElementById("user-car-svg");
       if (carEl) {
-        const m = (carEl.style.transform || "").match(/rotate\(([^)]+)deg\)/);
-        heading = m ? parseFloat(m[1]) : 0;
-      } else heading = 0;
-    }
-    if(!waypoints.length) waypoints.push(latlng); else waypoints[0]=latlng;
-    if(!userMarker){ userMarker = L.marker(latlng,{icon:carIcon}).addTo(map); map.setView(latlng,22); }
-    else { userMarker.setLatLng(latlng); }
-    if (autoFollow && autoRotation) {
-        rotateMap(-heading);
-    } else {
-      const drift = window._lastCenter ? latlng.distanceTo(window._lastCenter) : 0;
-      if (drift > 30) map.panTo(latlng, { animate:true, duration:0.6 });
-      window._lastCenter = latlng;
-    }
+        carEl.style.transform = `rotate(${heading}deg)`;
+      }
 
-    const carEl = document.getElementById('user-car-svg');
-    if (carEl) carEl.style.transform = `rotate(${heading}deg)`;
-
-    await adaptiveAIDashboard(latlng, heading);
-  }, ()=>console.warn("GPS unavailable"), { enableHighAccuracy:true, maximumAge:1000, timeout:5000 });
+      await adaptiveAIDashboard(latlng, heading);
+    },
+    err => {
+      console.warn("GPS disabled, switching to virtual GPS.", err);
+      useVirtualGPS = true;
+    },
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+  );
 }
 const compassBtn = document.getElementById("compassBtn");
 
 compassBtn.onclick = () => {
-    autoRotation = !autoRotation;
+  autoRotation = !autoRotation;
 
-    if (!autoRotation) {
-        rotateMap(0, true); // reset immediately
-        compassBtn.classList.remove("active");
-    } else {
-        rotateMap(-lastHeading);
-        compassBtn.classList.add("active");
-    }
+  if (!autoRotation) {
+    // North-up
+    rotateMap(0, true);
+    compassBtn.classList.remove("active");
+  } else {
+    // Back to last heading-up mode
+    rotateMap(lastHeading, true);
+    compassBtn.classList.add("active");
+  }
 };
 
 let driverCountry = null;
@@ -2570,38 +2531,50 @@ micBtn.onclick = async () => {
   } catch { alert('Please allow microphone permission to use voice search.'); }
 };
 let gestureStartAngle = null;
+let gestureStartHeading = 0;
 
-map.on("touchstart", (e) => {
-    if (e.touches && e.touches.length === 2) {
-        autoRotation = false;
-        compassBtn.classList.remove("active");
+map.on("touchstart", e => {
+  const evt = e.originalEvent || e;
+  if (!evt.touches || evt.touches.length !== 2) return;
 
-        const [t1, t2] = e.touches;
-        gestureStartAngle = Math.atan2(
-            t2.clientY - t1.clientY,
-            t2.clientX - t1.clientX
-        ) * (180 / Math.PI);
-    }
+  autoRotation = false;                  // manual rotation mode
+  compassBtn.classList.remove("active");
+
+  const [t1, t2] = evt.touches;
+  gestureStartAngle =
+    Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) *
+    (180 / Math.PI);
+
+  gestureStartHeading = lastHeading || 0;
 });
 
-map.on("touchmove", (e) => {
-    if (gestureStartAngle === null || e.touches.length !== 2) return;
+map.on("touchmove", e => {
+  const evt = e.originalEvent || e;
+  if (gestureStartAngle === null || !evt.touches || evt.touches.length !== 2)
+    return;
 
-    const [t1, t2] = e.touches;
-    const currentAngle = Math.atan2(
-        t2.clientY - t1.clientY,
-        t2.clientX - t1.clientX
-    ) * (180 / Math.PI);
+  const [t1, t2] = evt.touches;
+  const currentAngle =
+    Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) *
+    (180 / Math.PI);
 
-    const delta = currentAngle - gestureStartAngle;
-    userManualRotation = delta;
+  const delta = currentAngle - gestureStartAngle;
 
-    rotateMap(delta, true);
+  // new bearing = original heading + twist
+  const newHeading = gestureStartHeading + delta;
+  userManualRotation = newHeading;
+
+  rotateMap(newHeading, true);
 });
 
-map.on("touchend", () => {
+map.on("touchend", e => {
+  const evt = e.originalEvent || e;
+  // when all fingers lifted, finish gesture
+  if (!evt.touches || evt.touches.length === 0) {
     gestureStartAngle = null;
+  }
 });
+
 
 </script>
 </body>
