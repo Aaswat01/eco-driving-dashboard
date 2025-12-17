@@ -2155,6 +2155,7 @@ function getArrowClassByAngle(angle) {
     // Thresholds for turn types
     return "gm-arrow-straight";                   // Straight
 }
+const STATIC_GM_ARROWS = [];
 
 // 5. Create Marker
 function createGMArrow(latlng, bearing, typeClass) {
@@ -2171,10 +2172,15 @@ function createGMArrow(latlng, bearing, typeClass) {
             iconAnchor: [12, 12]
         })
     });
-    // Store base road bearing
-    marker._baseBearing = bearing;
-    marker._arrowEl = arrowEl;
-    STATIC_ARROWS.push(marker);
+
+    // store original road bearing
+    marker._gmBaseBearing = bearing;
+    marker._gmArrowEl = arrowEl;
+
+    STATIC_GM_ARROWS.push(marker);
+
+    // initial rotation (before any map rotation)
+    arrowEl.style.transform = `rotate(${bearing}deg)`;
 
     return marker;
 }
@@ -2426,13 +2432,14 @@ map.on("click", async e => {
 map.on("rotate", () => {
     const mapBearing = map.getBearing() || 0;
 
-    STATIC_ARROWS.forEach(m => {
-        if (!map.hasLayer(m)) {
-            const i = STATIC_ARROWS.indexOf(m);
-            if (i !== -1) STATIC_ARROWS.splice(i, 1);
-        }
-    });
+    STATIC_GM_ARROWS.forEach(marker => {
+        if (!marker._gmArrowEl) return;
 
+        // cancel map rotation
+        const fixedRotation = marker._gmBaseBearing - mapBearing;
+        marker._gmArrowEl.style.transform =
+            `rotate(${fixedRotation}deg)`;
+    });
 });
 
 function rebuildRoutes() {
