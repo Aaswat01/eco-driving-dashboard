@@ -1245,13 +1245,11 @@ if (navigator.geolocation){
       heading = lastHeading || 0;
     }
     lastHeading = heading;
-    if (!userMarker) {
-        userMarker = L.marker(latlng, {
-            icon: carIcon,
-            interactive: false
-        }).addTo(map);
+    if(!userMarker){
+      userMarker = L.marker(latlng,{icon:carIcon}).addTo(map);
+    } else {
+      userMarker.setLatLng(latlng);
     }
-
     map.setView(
       latlng,
       map.getZoom(),
