@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>5-reroute-pathbearing</title>
+<title>reroute-pathbearing</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
@@ -1257,11 +1257,10 @@ if (navigator.geolocation){
     if (autoRotation && activeRouteIndex !== null) {
         rotateTowardRoute();
     }
-
     map.setView(
-        latlng,
-        map.getZoom(),
-        { animate: true, duration: 0.25 }
+      latlng,
+      map.getZoom(),
+      { animate: true, duration: 0.25 }
     );
     // 🔥 TRIGGER ROTATION UPDATE HERE
     if (autoRotation && activeRouteIndex !== null) {
@@ -1284,7 +1283,7 @@ if (navigator.geolocation){
 }
 
 // ==========================================
-// 🚀 FIXED: CALCULATE BEARING FOR "HEADS UP" DISPLAY
+// 🚀 NEW: CALCULATE BEARING 10m AHEAD ON PATH
 // ==========================================
 function getPathBearing(latlng, route) {
     if (!route || !route.coordinates || route.coordinates.length < 2) return 0;
@@ -1354,7 +1353,6 @@ function rotateTowardRoute() {
         easeLinearity: 0.15
     });
 }
-
 const compassBtn = document.getElementById("compass-btn");
 compassBtn.onclick = () => {
     compassMode = (compassMode + 1) % 2;
@@ -1529,6 +1527,9 @@ function findCurrentStepByLocation(latlng, route) {
 
     return bestIndex >= 0 ? { index: bestIndex, distance: bestDist } : null;
 }
+
+// 🆕 SMART STEP ADVANCEMENT
+// Handles skipping missed steps and announcing current location
 
 // ==========================================
 // 🚀 FIXED: STEP ADVANCEMENT & DESTINATION ARRIVAL
@@ -1842,8 +1843,8 @@ async function adaptiveAIDashboard(latlng, heading) {
             
             lastRerouteTime = now;
             console.warn(`👉 Off-route detected (${offDist.toFixed(1)}m) – recalculating route...`);
-
-}
+;
+          }
     }
     // 🆕 Check for upcoming step announcements
     checkUpcomingSteps(latlng);
@@ -1858,10 +1859,11 @@ async function adaptiveAIDashboard(latlng, heading) {
         const stepLL = L.latLng(curStep.lat, curStep.lng);
         remainingDist += latlng.distanceTo(stepLL);
 
-        // distance of remaining steps
+        // total remaining steps
         for (let i = currentStepIndex + 1; i < steps.length; i++) {
             remainingDist += steps[i].distance;
         }
+
         const km = (remainingDist / 1000).toFixed(1);
         const distanceEl = document.getElementById(`route-distance-${routeDisplayIndex}`);
         if (distanceEl) distanceEl.textContent = `${km} km remaining`;
@@ -2050,7 +2052,7 @@ async function safeReroute(route, currentLL) {
             route.mainLine = mainRouteLine;
             route.coordinates = coords;     // 🔥 CRITICAL
             route.lastClosestIndex = 0;
-            requestAnimationFrame(() => rotateTowardRoute());
+            requestAnimationFrame(() => rotateTowardRoute()); 
             // 🆕 Force recenter + rotation
             setTimeout(() => forceRecenterToCar(19), 300);
             autoRotation = true;
