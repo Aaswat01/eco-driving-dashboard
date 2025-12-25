@@ -1252,11 +1252,6 @@ if (navigator.geolocation){
         }).addTo(map);
     }
 
-    // 🔥 HARD-LOCK: car stays fixed in center
-    userMarker.setLatLng(latlng);
-    if (autoRotation && activeRouteIndex !== null) {
-        rotateTowardRoute();
-    }
     map.setView(
       latlng,
       map.getZoom(),
