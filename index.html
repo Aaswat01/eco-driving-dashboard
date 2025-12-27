@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>new-reroute-test</title>
+<title>combined</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
@@ -167,7 +167,7 @@ border:none;border-radius:1vh;padding:0.4vh 5vw;font-weight:bold;cursor:pointer;
 /* === ROUTE PANEL === */
 #routePanel {
   position: fixed;
-  bottom: 8vh; /* lifted above bottom UI elements */
+  bottom: 9vh; /* lifted above bottom UI elements */
   left: 2vw;
   width: 270px;
   max-height: 32vh; /* more height and scrollable */
@@ -838,7 +838,7 @@ const SPEECH = {
   ECO_PERIODIC: 35000,
   STEP_REMINDER: 20000,
   WARNING_HOLD: 3500,
-  LOOKAHEAD_DISTANCE: 100, // 🆕 Reduced from 300m - announce when 150m away
+  LOOKAHEAD_DISTANCE: 150, // 🆕 Reduced from 300m - announce when 150m away
   STEP_ARRIVAL_THRESHOLD: 30, // 🆕 Consider "arrived" when within 30m
 
   lastEcoText: "",
@@ -1183,7 +1183,6 @@ map.on("movestart", (e) => {
     });
 });
 
-
 // ============================================
 // 🚗 AUTO RECENTER CAR AFTER IDLE
 // ============================================
@@ -1210,8 +1209,6 @@ setInterval(() => {
     );
 
 }, 800);
-
-
 
 // ============================================
 // 🔒 FORCE RECENTER + ZOOM (SAFE, CENTRALIZED)
@@ -1247,14 +1244,11 @@ if (navigator.geolocation){
     lastHeading = heading;
     if(!userMarker){
       userMarker = L.marker(latlng,{icon:carIcon}).addTo(map);
+      map.setView(latlng, 19);
     } else {
       userMarker.setLatLng(latlng);
     }
-    map.setView(
-      latlng,
-      map.getZoom(),
-      { animate: true, duration: 0.25 }
-    );
+
     // 🔥 TRIGGER ROTATION UPDATE HERE
     if (autoRotation && activeRouteIndex !== null) {
         rotateTowardRoute();
@@ -1376,6 +1370,14 @@ compassBtn.onclick = () => {
         compassBtn.style.background = "#00b36b";
     }
 };
+
+
+// keep map centered automatically if follow mode is ON
+setInterval(() => {
+    if (follow && autoCenter && userMarker && !userHasTouchedMap) {
+        map.panTo(userMarker.getLatLng(), { animate: true });
+    }
+}, 4000);
 
 // === Speed Limit (Overpass API - Real Data Only) ===
 let lastSpeedLimit = null;
@@ -1502,64 +1504,62 @@ function updateStepUI(routeIndex, stepIndex, status) {
 }
 
 // 🆕 LOCATION-BASED STEP DETECTION
+// This function finds which step the driver is ACTUALLY at right now
 function findCurrentStepByLocation(latlng, route) {
-    if (!route || !route.steps || route.steps.length === 0) return null;
-
-    let bestIndex = -1;
-    let bestDist = Infinity;
-
-    for (let i = 0; i < route.steps.length; i++) {
-        const stepLL = L.latLng(route.steps[i].lat, route.steps[i].lng);
-        const d = latlng.distanceTo(stepLL);
-
-        if (d < SPEECH.STEP_ARRIVAL_THRESHOLD && d < bestDist) {
-            bestDist = d;
-            bestIndex = i;
-        }
+  if (!route || !route.steps || route.steps.length === 0) return null;
+  
+  const steps = route.steps;
+  let closestStepIndex = -1;
+  let closestDistance = Infinity;
+  
+  // Check all remaining steps (from currentStepIndex onwards)
+  for (let i = currentStepIndex; i < steps.length; i++) {
+    const stepLL = L.latLng(steps[i].lat, steps[i].lng);
+    const dist = latlng.distanceTo(stepLL);
+    
+    // If driver is within arrival threshold of this step
+    if (dist < SPEECH.STEP_ARRIVAL_THRESHOLD && dist < closestDistance) {
+      closestDistance = dist;
+      closestStepIndex = i;
     }
-
-    return bestIndex >= 0 ? { index: bestIndex, distance: bestDist } : null;
+  }
+  
+  return closestStepIndex >= 0 ? { index: closestStepIndex, distance: closestDistance } : null;
 }
 
 // 🆕 SMART STEP ADVANCEMENT
 // Handles skipping missed steps and announcing current location
-
-// ==========================================
-// 🚀 FIXED: STEP ADVANCEMENT & DESTINATION ARRIVAL
-// ==========================================
 function smartStepAdvancement(latlng) {
   if (activeRouteIndex === null || !routes[activeRouteIndex]) return;
   const route = routes[activeRouteIndex];
   const steps = route.steps;
-
   // Find where driver actually is
   const locationResult = findCurrentStepByLocation(latlng, route);
-
   if (locationResult && locationResult.index !== currentStepIndex) {
     // Driver has moved to a different step!
     const newStepIndex = locationResult.index;
     console.log(`🚗 Location jump detected: ${currentStepIndex} → ${newStepIndex}`);  
-
     // Mark all skipped steps as completed (hide them)
     for (let i = currentStepIndex; i < newStepIndex; i++) {
         updateStepUI(activeRouteIndex, i, 'completed');
-
         // 🔥 Smoothly erase completed step line instead of hard removal
         if (steps[i].lineLayer) {
             fadeOutStepLine(steps[i].lineLayer);
-            steps[i].lineLayer = null; 
+            steps[i].lineLayer = null; // prevent double removal
         }     
+        if (steps[i].arrowLayer) {
+            try { steps[i].arrowLayer.remove(); } catch {}
+            steps[i].arrowLayer = null;
+        }
 
         if (steps[i].connectorLine) {
             fadeOutStepLine(steps[i].connectorLine, 400);
             steps[i].connectorLine = null;
         }
     }   
-
     // Update current step
     currentStepIndex = newStepIndex;
-    announcedSteps.clear(); 
-
+    announcedSteps.clear(); // Reset announcements 
     // 🔥 FORCE PATH TO FACE UP ON STEP CHANGE
     if (autoRotation) {
         requestAnimationFrame(() => rotateTowardRoute());
@@ -1570,30 +1570,22 @@ function smartStepAdvancement(latlng) {
       updateStepUI(activeRouteIndex, currentStepIndex, 'completed');
       speak("Destination reached.", "step", { interrupt: true });
       UI.aiBox.textContent = "Destination reached ✅";    
-
       setTimeout(() => {
         cleanupRoute(route);
       }, 3000);
-
       return;
     } 
-
     // Mark current step as active and announce it
     updateStepUI(activeRouteIndex, currentStepIndex, 'active');
-
     const step = steps[currentStepIndex];
-    const distText =
-      step.distance < 1000
-        ? `${step.distance.toFixed(0)} meters`
-        : `${(step.distance / 1000).toFixed(1)} kilometers`;
-
+    const distText = step.distance < 1000 
+      ? `${step.distance.toFixed(0)} meters` 
+      : `${(step.distance / 1000).toFixed(1)} kilometers`;
     const announcement = `${step.text}. Proceed for ${distText}.`;
-
     speak(announcement, "step", { interrupt: true });
     announcedSteps.add(currentStepIndex);
   }
 }
-
 
 // 🆕 Check for upcoming step announcements
 function checkUpcomingSteps(latlng) {
@@ -1619,14 +1611,13 @@ function checkUpcomingSteps(latlng) {
 }
 
 function cleanupRoute(route) {
-  if (!route) return;
-
-  try { map.removeLayer(route.group); } catch {}
   try { map.removeControl(route.rc); } catch {}
-
-  if (route.mainLine) {
-      try { route.mainLine.remove(); } catch {}
-      MAIN_ROUTE_LINES.delete(route.mainLine);
+  try { map.removeLayer(route.group); } catch {}
+  const destIndex = waypointMarkers.length - 1;
+  if (waypointMarkers[destIndex]) {
+    map.removeLayer(waypointMarkers[destIndex]);
+    waypointMarkers.splice(destIndex, 1);
+    waypoints.splice(destIndex + 1, 1);
   }
   const box = document.getElementById(`route-box-${route.routeIndex}`);
   if (box) box.remove();
@@ -1810,7 +1801,6 @@ async function triggerReroute(route, currentLL) {
     setTimeout(() => route._rerouting = false, 4000);
 }
 
-
 // ===== Main AI loop =====
 async function adaptiveAIDashboard(latlng, heading) {
   const currentSpeed = calculateGPSSpeed(latlng);
@@ -1861,7 +1851,7 @@ async function adaptiveAIDashboard(latlng, heading) {
         remainingDist += latlng.distanceTo(stepLL);
 
         // total remaining steps
-        for (let i = currentStepIndex + 1; i < steps.length; i++) {
+        for (let i = currentStepIndex; i < steps.length; i++) {
             remainingDist += steps[i].distance;
         }
 
@@ -1877,7 +1867,7 @@ async function adaptiveAIDashboard(latlng, heading) {
 }
 // --- Smooth animation for car movement (Google/Waze style) ---
 let lastAnimateTime = 0;
-const animationDuration = 300; // milliseconds
+const animationDuration = 450; // milliseconds
 let animateStart = null;
 let startLatLng = null;
 let targetLatLng = null;
@@ -1905,6 +1895,7 @@ function animateMarker(timestamp) {
 setInterval(() => {
     if (!userMarker || useVirtualGPS) return;
     // Prevent snapping map every loop when user is interacting
+    if (userHasTouchedMap) return;
     const latlng = userMarker.getLatLng();
     adaptiveAIDashboard(latlng, lastHeading);
 }, 900);
@@ -1917,7 +1908,6 @@ async function updateDriverCountry(latlng) {
     driverCountry = data.address && (data.address.country_code || "").toUpperCase();
   } catch (err) { console.warn("Country fetch failed:", err); }
 }
-
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
@@ -1993,18 +1983,17 @@ function addPolylineArrows(polyline, group) {
     if (!polyline || !group) return null;
 
     const decorator = L.polylineDecorator(polyline, {
-        pane: "markerPane",   // 🔝 always on top
         patterns: [{
-            offset: 25,
-            repeat: 70,
+            offset: 30,
+            repeat: 80,
             symbol: L.Symbol.arrowHead({
-                pixelSize: 17,      // ⬆️ bigger
-                headAngle: 50,
-                polygon: false,
+                pixelSize: 14,        // 🔥 cleaner & bolder
+                headAngle: 45,
+                polygon: false,       // Google-style open arrow
                 pathOptions: {
                     stroke: true,
-                    color: "#000000", // 🖤 BLACK
-                    weight: 4.2,      // ⬆️ thicker
+                    color: "#000000",
+                    weight: 4.6,
                     opacity: 2,
                     lineCap: "round",
                     lineJoin: "round"
@@ -2202,7 +2191,6 @@ async function createRoute(start, end, color, marker = null, index = null) {
       follow = true;
       autoCenter = true;
       setTimeout(() => rotateTowardRoute(), 600);
-      forceRecenterToCar(18); // 🆕 recenter + zoom when route starts
       // Speak the first step immediately (even if translation is still loading)
       if (steps.length > 0) {
         const firstStep = steps[0];
@@ -2222,7 +2210,6 @@ async function createRoute(start, end, color, marker = null, index = null) {
     }
 
     const routeObj = { rc, group, steps, endKey, routeIndex, totalDistance: r.summary.totalDistance, coordinates: coords,lastClosestIndex: 0};
-
     // 🔥 REGISTER ROUTE FIRST
     const existing = routes.find(x => x.routeIndex === routeIndex);
     if (existing) {
@@ -2241,7 +2228,6 @@ async function createRoute(start, end, color, marker = null, index = null) {
         follow = true;
         autoCenter = true;
         setTimeout(() => rotateTowardRoute(), 600);
-        forceRecenterToCar(18); // 🆕 recenter + zoom when route starts
     }
 
 
