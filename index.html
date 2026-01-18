@@ -4724,19 +4724,15 @@ function matchSimilarity(text, input) {
 // INPUT HANDLER — MAIN SEARCH ENTRY POINT
 // Triggered on every user keystroke
 // ============================================================================
-input.oninput = () => {
 
+input.oninput = () => {
   // Read user input and remove leading/trailing whitespace
   // This avoids meaningless searches like "   "
-  const q = input.value.trim();
-
+  const q = input.value.trim(); 
   // If a debounce timer already exists, cancel it
   // This prevents firing multiple API calls while user is typing fast
   if (searchTimer) clearTimeout(searchTimer);
-
-  // --------------------------------------------------------------------------
-  // EMPTY INPUT HANDLING (CRITICAL STATE RESET)
-  // --------------------------------------------------------------------------
+  
   if (!q) {
 
       // Increment global search sequence
@@ -4793,7 +4789,7 @@ input.oninput = () => {
 
         return;
     }
-
+    
     // ----------------------------------------------------------------------
     // DISPLAY MAP PINS FOR RESULTS
     // ----------------------------------------------------------------------
@@ -5118,3 +5114,6 @@ micBtn.onclick = async () => {
     alert('Please allow microphone permission to use voice search.');
   }
 };
+</script>
+</body>
+</html>
